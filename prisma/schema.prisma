@@ -20,41 +20,6 @@ enum UserRole {
   Donor
 }
 
-enum monasteryMemberRole {
-  Owner
-  Editor
-  Viewer
-}
-
-enum DonationStatus {
-  Pending
-  Approved
-  Rejected
-}
-
-enum DonationTypeName {
-  OneTime
-  Monthly
-}
-
-enum NotificationType {
-  invitation
-  donation
-  system
-  hsum_chaint
-}
-
-enum InvitationRole {
-  admin
-  editor
-  viewer
-}
-
-enum InvitationStatus {
-  pending
-  accept
-  reject
-}
 
 model User {
   id        Int      @id @default(autoincrement())
