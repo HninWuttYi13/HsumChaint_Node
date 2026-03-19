@@ -2,14 +2,17 @@ import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import type z from 'zod';
 export const validator =
-  (schema: z.ZodObject<any>) => async (req: Request, res: Response, next: NextFunction) => {
+  (schema: z.ZodTypeAny) => async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const parsed = await schema.parseAsync({
+      const parsed = (await schema.parseAsync({
         body: req.body,
         params: req.params,
         query: req.query,
-      });
-      req.body = parsed.body; //transform value(e.g +959-> 09)
+      })) as { body?: unknown; params?: Request['params']; query?: Request['params'] };
+      if (parsed.body !== undefined) req.body = parsed.body;
+      if (parsed.params !== undefined) req.params = parsed.params;
+      if (parsed.query !== undefined) req.query = parsed.query;
+
       return next();
     } catch (error: unknown) {
       console.log(error);
