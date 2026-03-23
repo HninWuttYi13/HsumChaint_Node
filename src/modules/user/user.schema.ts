@@ -1,13 +1,5 @@
 import { PaginationQuerySchema } from '@/helper/paginationSchema';
 import { z } from 'zod';
-export const UserSchema = z.object({
-  id: z.number(),
-  phone: z.string(),
-  username: z.string(),
-  email: z.string().nullable().optional(),
-  userType: z.enum(['Monk', 'Donor']),
-  createdAt: z.date(),
-});
 export const getAllUsersSchema = z.object({
   query: PaginationQuerySchema.extend({
     username: z.string().trim().optional(),
@@ -16,5 +8,14 @@ export const getAllUsersSchema = z.object({
     userType: z.enum(['Monk', 'Donor']).optional(),
   }),
 });
+export const idParamSchema = z.object({
+  params: z.object({
+    id: z
+      .string()
+      .regex(/^\d+$/, 'ID must be a number')
+      .transform(Number)
+      .refine((val) => !Number.isNaN(val), 'ID must be a valid number'),
+  }),
+});
 export type getAllUsersInput = z.infer<typeof getAllUsersSchema>['query'];
-export type User = z.infer<typeof UserSchema>;
+export type idParamsInput = z.infer<typeof idParamSchema>['params'];

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { getAllUsersInput } from './user.schema';
+import type { getAllUsersInput, idParamsInput } from './user.schema';
 export const selectUser = {
   id: true,
   phone: true,
@@ -33,16 +33,16 @@ export const getAllUserService = async (data: getAllUsersInput) => {
   ]);
   return { users, totals };
 };
-export const getUserById = async (id: number) => {
+export const getMeService = async (id: number) => {
   return prisma.user.findUnique({
     where: { id },
-    select: {
-      id: true,
-      phone: true,
-      username: true,
-      email: true,
-      userType: true,
-      createdAt: true,
-    },
+    select: selectUser,
+  });
+};
+export const getUserByIdService = async (data: idParamsInput) => {
+  const { id } = data;
+  return prisma.user.findUnique({
+    where: { id, isDeleted: false },
+    select: selectUser,
   });
 };

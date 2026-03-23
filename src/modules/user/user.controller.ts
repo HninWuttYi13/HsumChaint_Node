@@ -1,10 +1,9 @@
 import { generatePaginationData } from '@/helper/paginationHelper';
-import { PaginationQueryType } from '@/helper/paginationSchema';
 import { AppError } from '@/utils/AppError';
 import { successResponse } from '@/utils/response';
 import type { NextFunction, Request, Response } from 'express';
-import type { getAllUsersInput } from './user.schema';
-import { getAllUserService, getUserById } from './user.service';
+import type { getAllUsersInput, idParamsInput } from './user.schema';
+import { getAllUserService, getMeService, getUserByIdService } from './user.service';
 //get all users
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -26,18 +25,29 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
 
     return successResponse(res, { users, paginationData }, 'All Users are Retrieved Successfully');
   } catch (err) {
-    console.log('ERROR:', err);
     next(err);
   }
 };
 export const getMe = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user.userId;
-    const user = await getUserById(userId);
+    const user = await getMeService(userId);
     if (!user) {
       throw new AppError('User not found', 404);
     }
     successResponse(res, user, 'Current user retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const params = req.params as unknown as idParamsInput;
+    const user = await getUserByIdService(params);
+    if (!user) {
+      throw new AppError('User is not found', 404);
+    }
+    successResponse(res, user, 'User retrieved successfully');
   } catch (err) {
     next(err);
   }
