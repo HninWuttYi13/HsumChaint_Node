@@ -8,11 +8,15 @@ export const validator =
         body: req.body,
         params: req.params,
         query: req.query,
-      })) as { body?: unknown; params?: Request['params']; query?: Request['params'] };
+      })) as {
+        body?: unknown;
+        params?: Request['params'];
+        query?: Request['params'];
+      };
       if (parsed.body !== undefined) req.body = parsed.body;
-      if (parsed.params !== undefined) req.params = parsed.params;
-      if (parsed.query !== undefined) req.query = parsed.query;
-
+      //I use Object.assign to avoid the "readonly" assignment error
+      if (parsed.params) Object.assign(req.params, parsed.params);
+      if (parsed.query) Object.assign(req.query, parsed.query);
       return next();
     } catch (error: unknown) {
       console.log(error);

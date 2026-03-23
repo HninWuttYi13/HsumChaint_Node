@@ -1,42 +1,48 @@
 import { prisma } from '@/lib/prisma';
-import type { CreateUser, User } from './user.schema';
-
-export class UserService {
-  async getAllUsers(): Promise<User[]> {
-    return prisma.user.findMany({
-      include: {
-        _count: {
-          select: { posts: true },
-        },
-      },
-    }) as unknown as User[];
-  }
-
-  async getUserById(id: number): Promise<User | null> {
-    return prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        phone: true,
-        username: true,
-        email: true,
-        userType: true,
-        createdAt: true,
-      },
-    }) as unknown as User | null;
-  }
-
-  async createUser(data: CreateUser): Promise<User> {
-    return prisma.user.create({
-      data,
-    }) as unknown as User;
-  }
-
-  async deleteUser(id: number): Promise<void> {
-    await prisma.user.delete({
-      where: { id },
-    });
-  }
-}
-
-export const userService = new UserService();
+import type { getAllUsersInput } from './user.schema';
+export const selectUser = {
+  id: true,
+  phone: true,
+  username: true,
+  email: true,
+  userType: true,
+  createdAt: true,
+} as const;
+//get all use service
+export const getAllUserService = async (data: getAllUsersInput) => {
+  const { page, limit, username, email, phone, userType } = data;
+  const skip = (page - 1) * limit;
+  //check the existing data
+  const where = {
+    isDeleted: false,
+    ...(username && { username: { contains: username } }),
+    ...(phone && { phone: { contains: phone } }),
+    ...(email && { email: { contains: email } }),
+    ...(userType && { userType }),
+  };
+  //ensure findMany and count are perfectly sync
+  const [users, totals] = await prisma.$transaction([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      select: selectUser,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.user.count({ where }),
+  ]);
+  return { users, totals };
+};
+export const getUserById = async (id: number) => {
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      phone: true,
+      username: true,
+      email: true,
+      userType: true,
+      createdAt: true,
+    },
+  });
+};

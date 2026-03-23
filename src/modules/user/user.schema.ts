@@ -1,15 +1,20 @@
+import { PaginationQuerySchema } from '@/helper/paginationSchema';
 import { z } from 'zod';
-
 export const UserSchema = z.object({
-  id: z.number().describe('The user ID'),
-  email: z.email().describe('The user email address'),
-  name: z.string().optional().describe('The user name'),
+  id: z.number(),
+  phone: z.string(),
+  username: z.string(),
+  email: z.string().nullable().optional(),
+  userType: z.enum(['Monk', 'Donor']),
+  createdAt: z.date(),
 });
-
-export const CreateUserSchema = z.object({
-  email: z.email().describe('The user email address'),
-  name: z.string().optional().describe('The user name'),
+export const getAllUsersSchema = z.object({
+  query: PaginationQuerySchema.extend({
+    username: z.string().trim().optional(),
+    email: z.string().trim().toLowerCase().email('invalid email format').optional(),
+    phone: z.string().optional(),
+    userType: z.enum(['Monk', 'Donor']).optional(),
+  }),
 });
-
+export type getAllUsersInput = z.infer<typeof getAllUsersSchema>['query'];
 export type User = z.infer<typeof UserSchema>;
-export type CreateUser = z.infer<typeof CreateUserSchema>;

@@ -39,10 +39,11 @@ export function generatePaginationData(
     };
   }
   const lastPage = Math.ceil(total / perPage);
+  const normalizedPage = currentPage > lastPage ? lastPage : currentPage;
   //Generate Metadata
   const meta: PaginationMeta = {
     total,
-    currentPage,
+    currentPage: normalizedPage,
     lastPage,
     perPage,
   };

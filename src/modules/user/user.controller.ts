@@ -1,62 +1,44 @@
+import { generatePaginationData } from '@/helper/paginationHelper';
+import { PaginationQueryType } from '@/helper/paginationSchema';
+import { AppError } from '@/utils/AppError';
+import { successResponse } from '@/utils/response';
 import type { NextFunction, Request, Response } from 'express';
-import { AppError } from '../../utils/AppError';
-import { successResponse } from '../../utils/response';
-import { CreateUserSchema } from './user.schema';
-import { userService } from './user.service';
+import type { getAllUsersInput } from './user.schema';
+import { getAllUserService, getUserById } from './user.service';
+//get all users
+export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const rawQuery = req.query as any;
+    // This is the "Safety Guard" for Prisma.
+    const page = Number(rawQuery.page) || 1;
+    const limit = Number(rawQuery.limit) || 10;
 
-export class UserController {
-  async getAllUsers(_req: Request, res: Response, next: NextFunction) {
-    try {
-      const users = await userService.getAllUsers();
-      successResponse(res, users, 'Users retrieved successfully');
-    } catch (err) {
-      next(err);
-    }
-  }
-  async getMe(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = req.user.userId;
-      const user = await userService.getUserById(userId);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-      successResponse(res, user, 'Current user retrieved successfully');
-    } catch (err) {
-      next(err);
-    }
-  }
-  async getUserById(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { id } = req.params;
-      const user = await userService.getUserById(Number(id));
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-      successResponse(res, user, 'User retrieved successfully');
-    } catch (err) {
-      next(err);
-    }
-  }
+    // Create a clean object for the service
+    const queryData: getAllUsersInput = {
+      ...rawQuery,
+      page,
+      limit,
+    };
+    const { users, totals } = await getAllUserService(queryData);
 
-  async createUser(req: Request, res: Response, next: NextFunction) {
-    try {
-      const validatedData = CreateUserSchema.parse(req.body);
-      const user = await userService.createUser(validatedData);
-      successResponse(res, user, 'User created successfully', 201);
-    } catch (err) {
-      next(err);
-    }
-  }
+    // 4. Generate pagination
+    const paginationData = generatePaginationData(req, totals, page, limit);
 
-  async deleteUser(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { id } = req.params;
-      await userService.deleteUser(Number(id));
-      successResponse(res, null, 'User deleted successfully', 204);
-    } catch (err) {
-      next(err);
-    }
+    return successResponse(res, { users, paginationData }, 'All Users are Retrieved Successfully');
+  } catch (err) {
+    console.log('ERROR:', err);
+    next(err);
   }
-}
-
-export const userController = new UserController();
+};
+export const getMe = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.userId;
+    const user = await getUserById(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    successResponse(res, user, 'Current user retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
