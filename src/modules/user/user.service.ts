@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import type { getAllUsersInput, idParamsInput } from './user.schema';
+import { AppError } from '@/utils/AppError';
+import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 export const selectUser = {
   id: true,
   phone: true,
@@ -43,6 +44,42 @@ export const getUserByIdService = async (data: idParamsInput) => {
   const { id } = data;
   return prisma.user.findUnique({
     where: { id, isDeleted: false },
+    select: selectUser,
+  });
+};
+export const updateUserService = async (id: number, data: updateUserBodyInput) => {
+  const user = await prisma.user.findUnique({ where: { id } });
+
+  if (!user) throw new AppError('User is not found', 404);
+
+  // Handle password separately
+  let hashedPassword: string | undefined;
+
+  if (data.newPassword) {
+    if (!data.oldPassword) {
+      throw new AppError('Old password is required', 400);
+    }
+
+    const isPasswordMatch = await Bun.password.verify(data.oldPassword, user.password);
+
+    if (!isPasswordMatch) {
+      throw new AppError('Old password is incorrect', 400);
+    }
+
+    hashedPassword = await Bun.password.hash(data.newPassword);
+  }
+
+  //  Build update object using spread pattern
+  const updateData = {
+    ...(data.username && { username: data.username }),
+    ...(data.email && { email: data.email }),
+    ...(data.phone && { phone: data.phone }),
+    ...(hashedPassword && { password: hashedPassword }),
+  };
+
+  return prisma.user.update({
+    where: { id },
+    data: updateData,
     select: selectUser,
   });
 };

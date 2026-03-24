@@ -2,8 +2,13 @@ import { generatePaginationData } from '@/helper/paginationHelper';
 import { AppError } from '@/utils/AppError';
 import { successResponse } from '@/utils/response';
 import type { NextFunction, Request, Response } from 'express';
-import type { getAllUsersInput, idParamsInput } from './user.schema';
-import { getAllUserService, getMeService, getUserByIdService } from './user.service';
+import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
+import {
+  getAllUserService,
+  getMeService,
+  getUserByIdService,
+  updateUserService,
+} from './user.service';
 //get all users
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -48,6 +53,16 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
       throw new AppError('User is not found', 404);
     }
     successResponse(res, user, 'User retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params as unknown as idParamsInput;
+    const body = req.body as updateUserBodyInput;
+    const result = await updateUserService(id, body);
+    return successResponse(res, result, 'User is updated successfully');
   } catch (err) {
     next(err);
   }
