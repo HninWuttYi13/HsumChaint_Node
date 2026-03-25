@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import type { Request } from 'express';
 
 // Types for pagination metadata
 export interface PaginationMeta {
@@ -59,11 +59,11 @@ export function generatePaginationData(
   const queryParams = new URLSearchParams();
 
   // Preserve existing query parameters
-  Object.entries(req.query).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(req.query)) {
     if (value !== undefined) {
       queryParams.set(key, String(value));
     }
-  });
+  }
 
   queryParams.set('limit', perPage.toString());
 

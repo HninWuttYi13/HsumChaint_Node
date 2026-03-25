@@ -1,8 +1,8 @@
 import { app } from './app';
-import { logger } from './utils/logger';
 import { env } from './config/env';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
+import { logger } from './utils/logger';
 
 const PORT = env.PORT || 3000;
 
@@ -33,11 +33,11 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Unhandled errors
 process.on('unhandledRejection', (err) => {
-  logger.error(err as any, 'Unhandled Rejection');
+  logger.error(err as Error, 'Unhandled Rejection');
   shutdown('unhandledRejection');
 });
 
 process.on('uncaughtException', (err) => {
-  logger.error(err as any, 'Uncaught Exception');
+  logger.error(err as Error, 'Uncaught Exception');
   shutdown('uncaughtException');
 });

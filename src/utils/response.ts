@@ -1,17 +1,17 @@
-import { Response } from 'express';
+import type { Response } from 'express';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
-  error?: any;
+  error?: unknown;
 }
 
 export const successResponse = <T>(
   res: Response,
   data: T,
-  message: string = 'Success',
-  statusCode: number = 200
+  message = 'Success',
+  statusCode = 200
 ) => {
   const response: ApiResponse<T> = {
     success: true,
@@ -23,9 +23,9 @@ export const successResponse = <T>(
 
 export const errorResponse = (
   res: Response,
-  error: any,
-  message: string = 'Internal Server Error',
-  statusCode: number = 500
+  error: unknown,
+  message = 'Internal Server Error',
+  statusCode = 500
 ) => {
   const isDevelopment = process.env.NODE_ENV !== 'production';
 

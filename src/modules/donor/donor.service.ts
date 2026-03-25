@@ -1,10 +1,11 @@
-import { Request } from 'express';
+import type { Prisma } from '@prisma/client';
+import type { Request } from 'express';
+import { generatePaginationData } from '../../helper/paginationHelper';
+import type { PaginationQueryType } from '../../helper/paginationSchema';
+import { prisma } from '../../lib/prisma';
 import { BadRequestError } from '../../utils/BadRequestError';
 import { NotFoundError } from '../../utils/NotFoundError';
-import { generatePaginationData } from '../../helper/paginationHelper';
-import { prisma } from '../../lib/prisma';
-import { PaginationQueryType } from '../../helper/paginationSchema';
-import { CreateDonorType, GetAllDonorsQueryType, UpdateDonorType } from './donor.schema';
+import type { CreateDonorType, GetAllDonorsQueryType, UpdateDonorType } from './donor.schema';
 
 const donorInclude = {
   user: {
@@ -73,7 +74,7 @@ export async function getAllDonorsService(
   const { name, email, phoneNo } = query;
   const { page, limit } = pagination;
 
-  const where: Record<string, any> = {};
+  const where: Prisma.DonorWhereInput = {};
 
   if (name) {
     where.name = { contains: name };

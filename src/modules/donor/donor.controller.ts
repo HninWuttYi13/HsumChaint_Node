@@ -1,16 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { CreateDonorType, GetAllDonorsQueryType, UpdateDonorType } from './donor.schema';
 import type { PaginationQueryType } from '../../helper/paginationSchema';
+import type { CreateDonorType, GetAllDonorsQueryType, UpdateDonorType } from './donor.schema';
 
 type IdParam = { id: string };
+import { successResponse } from '../../utils/response';
 import {
   createDonorService,
+  deleteDonorService,
   getAllDonorsService,
   getDonorByIdService,
   updateDonorService,
-  deleteDonorService,
 } from './donor.service';
-import { successResponse } from '../../utils/response';
 
 const createDonor = async (
   req: Request<unknown, unknown, CreateDonorType['body']>,

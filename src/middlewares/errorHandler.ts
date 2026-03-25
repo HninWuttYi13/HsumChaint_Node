@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
-import { errorResponse } from '../utils/response';
-import { AppError } from '../utils/AppError';
+import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
+import { AppError } from '../utils/AppError';
+import { errorResponse } from '../utils/response';
 
 export const globalErrorHandler = (
   err: unknown,
@@ -11,7 +11,7 @@ export const globalErrorHandler = (
 ) => {
   let statusCode = 500;
   let message = 'Internal Server Error';
-  let errorData: any = process.env.NODE_ENV === 'development' ? err : undefined;
+  let errorData: unknown = process.env.NODE_ENV === 'development' ? err : undefined;
 
   if (err instanceof AppError) {
     statusCode = err.statusCode;
@@ -19,7 +19,7 @@ export const globalErrorHandler = (
   } else if (err instanceof ZodError) {
     statusCode = 400;
     message = 'Validation Error';
-    errorData = (err as any).errors || (err as any).issues;
+    errorData = err.issues;
   } else if (err instanceof Error && err.name === 'ValidationError') {
     statusCode = 400;
     message = err.message;

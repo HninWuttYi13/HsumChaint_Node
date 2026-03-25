@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import {
   createDonor,
+  deleteDonor,
   getAllDonors,
   getDonorById,
   updateDonor,
-  deleteDonor,
 } from './donor.controller';
 import {
   validateCreateDonor,
+  validateDeleteDonor,
   validateGetAllDonors,
   validateGetDonorById,
   validateUpdateDonor,
-  validateDeleteDonor,
 } from './donor.middleware';
 
 const router = Router();
