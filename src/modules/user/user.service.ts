@@ -83,3 +83,22 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
     select: selectUser,
   });
 };
+export const softDeleteUserService = async (data: idParamsInput) => {
+  const { id } = data;
+
+  const existingUser = await prisma.user.findFirst({
+    where: { id, isDeleted: false },
+    select: { id: true, username: true },
+  });
+
+  if (!existingUser) {
+    throw new AppError('User is not found or already deleted', 404);
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data: { isDeleted: true },
+  });
+
+  return existingUser;
+};
