@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type ErrorRequestHandler } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -27,10 +28,10 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 // Body parsing (Must be above logging to see req.body)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-
+//parses cookies
+app.use(cookieParser());
 // Logging
 app.use(httpLogger);
-
 // Routes
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/donors', donorRouter);
