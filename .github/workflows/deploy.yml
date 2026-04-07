@@ -2,63 +2,122 @@ name: Release & Deploy
 
 on:
   push:
-    branches: [main, staging]
+    branches: [main, develop]
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Set repo name to lowercase
+        id: repo
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and Push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/${{ github.ref_name == 'main' && 'production' || 'staging' }}.Dockerfile
+          file: ./docker/${{ github.ref_name == 'main' && 'production' || 'develop' }}.Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          tags: ghcr.io/${{ steps.repo.outputs.name }}:${{ github.ref_name }}
+    outputs:
+      repo_name: ${{ steps.repo.outputs.name }}
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' || 'staging' }}
+    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     steps:
-      - name: Deploy to Vultr via SSH
+      - name: Deploy to DigitalOcean via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          JWT_ACCESS_TOKEN_SECRET: ${{ secrets.JWT_ACCESS_TOKEN_SECRET }}
+          JWT_ACCESS_TOKEN_EXPIRES_IN: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRES_IN }}
+          JWT_REFRESH_TOKEN_SECRET: ${{ secrets.JWT_REFRESH_TOKEN_SECRET }}
+          JWT_REFRESH_TOKEN_EXPIRES_IN: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRES_IN }}
         with:
-          host: ${{ secrets.VULTR_HOST }}
-          username: ${{ secrets.VULTR_USER }}
-          key: ${{ secrets.VULTR_SSH_KEY }}
-          envs: MYSQL_ROOT_PASSWORD,REDIS_PASSWORD,DB_NAME
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
+          envs: MYSQL_ROOT_PASSWORD,REDIS_PASSWORD,DB_NAME,MYSQL_USER,MYSQL_PASSWORD,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_EXPIRES_IN,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_EXPIRES_IN
           script: |
-            PROJECT_DIR="~/app-${{ github.ref_name }}"
+            PROJECT_DIR="$HOME/app-${{ github.ref_name }}"
             mkdir -p $PROJECT_DIR && cd $PROJECT_DIR
 
             # Set up .env
             cat <<EOF > .env
-            IMAGE_NAME=ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            IMAGE_NAME=ghcr.io/${{ needs.build-and-push.outputs.repo_name }}:${{ github.ref_name }}
+            NODE_ENV=${{ github.ref_name == 'main' && 'production' || 'development' }}
+            PORT=3000
             MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+            MYSQL_HOST=mysql
+            MYSQL_USER=$MYSQL_USER
+            MYSQL_PASSWORD=$MYSQL_PASSWORD
+            MYSQL_DATABASE=$DB_NAME
+            DATABASE_URL=mysql://$MYSQL_USER:$MYSQL_PASSWORD@mysql:3306/$DB_NAME
             REDIS_PASSWORD=$REDIS_PASSWORD
+            REDIS_URL=redis://:$REDIS_PASSWORD@redis:6379
             DB_NAME=$DB_NAME
+            JWT_ACCESS_TOKEN_SECRET=$JWT_ACCESS_TOKEN_SECRET
+            JWT_ACCESS_TOKEN_EXPIRES_IN=$JWT_ACCESS_TOKEN_EXPIRES_IN
+            JWT_REFRESH_TOKEN_SECRET=$JWT_REFRESH_TOKEN_SECRET
+            JWT_REFRESH_TOKEN_EXPIRES_IN=$JWT_REFRESH_TOKEN_EXPIRES_IN
             EOF
 
             # Login and Pull
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
             # Download config files
-            curl -L https://raw.githubusercontent.com/${{ github.repository }}/main/nginx.conf -o nginx.conf
-            curl -L https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose-${{ github.ref_name }}.yaml -o docker-compose.yml
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/nginx.conf -o nginx.conf
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/docker-compose-${{ github.ref_name }}.yaml -o docker-compose.yml
 
             # Deploy
             docker compose pull
             docker compose up -d --remove-orphans
 
-            # Database Migration (Run once on app_1)
-            docker compose exec -T app_1 bunx prisma migrate deploy
+            # Database Migration
+            APP_CONTAINER=${{ github.ref_name == 'main' && 'hsumchaint_node_production' || 'hsumchaint_node_develop' }}
+            rm -rf $PROJECT_DIR/prisma
+            docker cp $APP_CONTAINER:/app/prisma $PROJECT_DIR/prisma
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/prisma.config.ts -o $PROJECT_DIR/prisma.config.ts
+            printf 'DATABASE_URL=mysql://root:%s@mysql:3306/%s\n' "$MYSQL_ROOT_PASSWORD" "$DB_NAME" > $PROJECT_DIR/migration.env
+            cat $PROJECT_DIR/migration.env
+            docker run --rm \
+              --network app-${{ github.ref_name }}_app-network \
+              --env-file $PROJECT_DIR/migration.env \
+              -v $PROJECT_DIR/prisma:/app/prisma \
+              -v $PROJECT_DIR/prisma.config.ts:/app/prisma.config.ts \
+              -v $PROJECT_DIR/migration.env:/app/.env \
+              -w /app \
+              oven/bun:1.3.10 sh -c "bun add dotenv prisma && bunx prisma migrate deploy"
+
+  notify:
+    needs: [build-and-push, deploy]
+    if: always()
+    uses: ./.github/workflows/reusable-telegram.yml
+    with:
+      message: |
+        ${{ needs.deploy.result == 'success' && '✅' || '❌' }} <b>Deploy ${{ needs.deploy.result == 'success' && 'Successful' || 'Failed' }}</b>
+
+        📦 <b>Project:</b> HsumChaint Node
+        🌿 <b>Branch:</b> <code>${{ github.ref_name }}</code>
+        🏷️ <b>Environment:</b> ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
+        👤 <b>Actor:</b> ${{ github.actor }}
+        💬 <b>Commit:</b> <code>${{ github.event.head_commit.message }}</code>
+
+        🔗 <b>API URL:</b> https://hsum-chaint-node-api.invisigate.asia/
+        📋 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Logs</a>
+    secrets: inherit
