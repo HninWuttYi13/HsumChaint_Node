@@ -1,26 +1,28 @@
 import { prisma } from '@/lib/prisma';
 import { AppError } from '@/utils/AppError';
+import type { Prisma } from 'prisma-client';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 export const selectUser = {
   id: true,
   phone: true,
   username: true,
   email: true,
+  contactPhone: true,
   userType: true,
   createdAt: true,
 } as const;
 //get all use service
 export const getAllUserService = async (data: getAllUsersInput) => {
-  const { page, limit, username, email, phone, userType } = data;
+  const { page, limit, username, email, phone, contactPhone, userType } = data;
   const skip = (page - 1) * limit;
   //check the existing data
-  const where = {
-    isDeleted: false,
-    ...(username && { username: { contains: username } }),
-    ...(phone && { phone: { contains: phone } }),
-    ...(email && { email: { contains: email } }),
-    ...(userType && { userType }),
-  };
+  const where: Prisma.UserWhereInput = { isDeleted: false };
+
+  if (username) where.username = { startsWith: username };
+  if (phone) where.phone = { startsWith: phone };
+  if (email) where.email = { contains: email };
+  if (contactPhone) where.contactPhone = { startsWith: contactPhone };
+  if (userType) where.userType = userType;
   //ensure findMany and count are perfectly sync
   const [users, totals] = await prisma.$transaction([
     prisma.user.findMany({
@@ -34,23 +36,22 @@ export const getAllUserService = async (data: getAllUsersInput) => {
   ]);
   return { users, totals };
 };
-export const getMeService = async (id: number) => {
-  return prisma.user.findUnique({
-    where: { id },
-    select: selectUser,
-  });
-};
-export const getUserByIdService = async (data: idParamsInput) => {
-  const { id } = data;
-  return prisma.user.findUnique({
+//reusable function for specific user id
+const getUserWithProfile = (id: number) => {
+  return prisma.user.findFirst({
     where: { id, isDeleted: false },
-    select: selectUser,
+    select: { ...selectUser, monkProfile: true },
   });
 };
+//me route service
+export const getMeService = getUserWithProfile;
+//get user by id
+export const getUserByIdService = ({ id }: idParamsInput) => getUserWithProfile(id);
+//update specific user id
 export const updateUserService = async (id: number, data: updateUserBodyInput) => {
   const user = await prisma.user.findUnique({ where: { id } });
 
-  if (!user) throw new AppError('User is not found', 404);
+  if (!user || user.isDeleted) throw new AppError('User is not found', 404);
 
   // Handle password separately
   let hashedPassword: string | undefined;
@@ -71,24 +72,24 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
 
   //  Build update object using spread pattern
   const updateData = {
-    ...(data.username && { username: data.username }),
-    ...(data.email && { email: data.email }),
-    ...(data.phone && { phone: data.phone }),
-    ...(hashedPassword && { password: hashedPassword }),
+    ...(data.username !== undefined && { username: data.username }),
+    ...(data.email !== undefined && { email: data.email }),
+    ...(data.phone !== undefined && { phone: data.phone }),
+    ...(hashedPassword !== undefined && { password: hashedPassword }),
+    ...(data.contactPhone !== undefined && { contactPhone: data.contactPhone }),
   };
-
   return prisma.user.update({
     where: { id },
     data: updateData,
     select: selectUser,
   });
 };
+//delete user account with soft delete
 export const softDeleteUserService = async (data: idParamsInput) => {
   const { id } = data;
-
   const existingUser = await prisma.user.findFirst({
     where: { id, isDeleted: false },
-    select: { id: true, username: true },
+    select: selectUser,
   });
 
   if (!existingUser) {
@@ -99,6 +100,5 @@ export const softDeleteUserService = async (data: idParamsInput) => {
     where: { id },
     data: { isDeleted: true },
   });
-
   return existingUser;
 };
