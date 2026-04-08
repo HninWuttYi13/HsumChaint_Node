@@ -1,11 +1,24 @@
 import { PaginationQuerySchema } from '@/helper/paginationSchema';
 import { z } from 'zod';
 import { passwordSchema, phoneSchema } from '../auth/auth.schema';
+const normalizePhoneSearch = z
+  .string()
+  .trim()
+  .transform((value) => {
+    // remove non-digits
+    const cleaned = value.replace(/\D/g, '');
+    // normalize Myanmar formats
+    if (cleaned.startsWith('959')) return `09${cleaned.slice(3)}`;
+    if (cleaned.startsWith('09')) return cleaned;
+    return cleaned;
+  })
+  .optional();
 export const getAllUsersSchema = z.object({
   query: PaginationQuerySchema.extend({
     username: z.string().trim().optional(),
-    email: z.string().trim().toLowerCase().email('invalid email format').optional(),
-    phone: z.string().optional(),
+    email: z.string().trim().toLowerCase().optional(),
+    phone: normalizePhoneSearch,
+    contactPhone: normalizePhoneSearch,
     userType: z.enum(['Monk', 'Donor']).optional(),
   }),
 });
@@ -29,6 +42,7 @@ export const updateUserSchema = z.object({
         .optional(),
       phone: phoneSchema.optional(),
       email: z.string().trim().toLowerCase().email('Invalid email').optional(),
+      contactPhone: phoneSchema.optional(),
       oldPassword: z.string().optional(),
       newPassword: passwordSchema.optional(),
     })
