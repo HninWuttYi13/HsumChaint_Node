@@ -22,6 +22,8 @@ model User {
   isDeleted    Boolean  @default(false) @map("is_deleted")
   refreshToken RefreshToken[]
   resetToken   PasswordResetToken[]
+  @@index([isDeleted, userType, createdAt(sort: Desc)])
+  @@index([username])
   @@index([contactPhone])
   @@map("users")
 }
