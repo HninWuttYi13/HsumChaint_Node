@@ -20,6 +20,8 @@ export const getAllUsersSchema = z.object({
     phone: normalizePhoneSearch,
     contactPhone: normalizePhoneSearch,
     userType: z.enum(['Monk', 'Donor']).optional(),
+    monasteryName: z.string().optional(),
+    monasteryAddress: z.string().optional(),
   }),
 });
 export const idParamSchema = z.object({

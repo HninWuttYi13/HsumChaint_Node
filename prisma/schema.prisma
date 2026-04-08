@@ -49,6 +49,8 @@ model MonkProfile {
   monasteryName    String @map("monastery_name")
   monasteryAddress String @map("monastery_address")
   user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([monasteryName])
+@@index([monasteryAddress])
   @@map("monk_profile")
 }
 model PasswordResetToken {

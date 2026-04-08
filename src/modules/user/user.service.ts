@@ -13,7 +13,17 @@ export const selectUser = {
 } as const;
 //get all use service
 export const getAllUserService = async (data: getAllUsersInput) => {
-  const { page, limit, username, email, phone, contactPhone, userType } = data;
+  const {
+    page,
+    limit,
+    username,
+    email,
+    phone,
+    contactPhone,
+    userType,
+    monasteryName,
+    monasteryAddress,
+  } = data;
   const skip = (page - 1) * limit;
   //check the existing data
   const where: Prisma.UserWhereInput = { isDeleted: false };
@@ -23,6 +33,22 @@ export const getAllUserService = async (data: getAllUsersInput) => {
   if (email) where.email = { contains: email };
   if (contactPhone) where.contactPhone = { startsWith: contactPhone };
   if (userType) where.userType = userType;
+  //create empty object to add both monastery address and monastery name
+  const monkProfileFilter: Prisma.MonkProfileWhereInput = {};
+  if (monasteryAddress) {
+    monkProfileFilter.monasteryAddress = { startsWith: monasteryAddress };
+  }
+  if (monasteryName) {
+    monkProfileFilter.monasteryName = { startsWith: monasteryName };
+  }
+  //after collect all data add into where object
+  if (Object.keys(monkProfileFilter).length > 0) {
+    where.monkProfile = { is: monkProfileFilter };
+    //prevent useless query on data users
+    if (!userType) {
+      where.userType = 'Monk';
+    }
+  }
   //ensure findMany and count are perfectly sync
   const [users, totals] = await prisma.$transaction([
     prisma.user.findMany({
