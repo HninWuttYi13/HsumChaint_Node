@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { prisma } from '@/lib/prisma';
-import { getAllUserService } from '../user.service';
+import { getAllUserService } from '../../user.service';
 describe('getAllUserService Integration test', () => {
   //Arrange: before test, create 3 valid users
   beforeAll(async () => {

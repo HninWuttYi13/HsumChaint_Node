@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { prisma } from '@/lib/prisma';
-import { softDeleteUserService } from '../user.service';
+import { softDeleteUserService } from '../../user.service';
 
 describe('softDeleteUserService Integration Test', () => {
   let userId: number;

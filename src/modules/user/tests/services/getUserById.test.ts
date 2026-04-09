@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { prisma } from '@/lib/prisma';
-import { getUserByIdService } from '../user.service';
+import { getUserByIdService } from '../../user.service';
 
 describe('getUserByIdService Integration Test', () => {
   let donorId: number;

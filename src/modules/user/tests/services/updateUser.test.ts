@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { prisma } from '@/lib/prisma';
-import { updateUserService } from '../user.service';
+import { updateUserService } from '../../user.service';
 describe('updateUserService Integration Test', () => {
   //Arrange: before test create a user to test
   let userId: number;
