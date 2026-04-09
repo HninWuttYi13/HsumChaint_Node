@@ -97,17 +97,37 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
   }
 
   //  Build update object using spread pattern
-  const updateData = {
+  const updateData: Prisma.UserUpdateInput = {
     ...(data.username !== undefined && { username: data.username }),
     ...(data.email !== undefined && { email: data.email }),
     ...(data.phone !== undefined && { phone: data.phone }),
     ...(hashedPassword !== undefined && { password: hashedPassword }),
     ...(data.contactPhone !== undefined && { contactPhone: data.contactPhone }),
   };
+  //build monk profile update separately because it belongs to a separate database
+  const monkProfileData: Prisma.MonkProfileUpdateInput = {};
+  //collet only provide fields (partial update support)
+  if (data.monasteryName !== undefined) {
+    monkProfileData.monasteryName = data.monasteryName;
+  }
+  if (data.monasteryAddress !== undefined) {
+    monkProfileData.monasteryAddress = data.monasteryAddress;
+  }
+  // If at least one monastery field is provided, attach nested update
+  if (Object.keys(monkProfileData).length > 0) {
+    // Business rule: only Monk users are allowed to update monastery info
+    if (user.userType !== 'Monk') {
+      throw new AppError('Only monk can update monastery info', 400);
+    }
+    // Prisma nested update for related monkProfile table
+    updateData.monkProfile = {
+      update: monkProfileData,
+    };
+  }
   return prisma.user.update({
     where: { id },
     data: updateData,
-    select: selectUser,
+    select: { ...selectUser, monkProfile: true },
   });
 };
 //delete user account with soft delete

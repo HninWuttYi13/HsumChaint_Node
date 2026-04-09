@@ -45,6 +45,14 @@ export const updateUserSchema = z.object({
       phone: phoneSchema.optional(),
       email: z.string().trim().toLowerCase().email('Invalid email').optional(),
       contactPhone: phoneSchema.optional(),
+      monasteryName: z
+        .string('Monastery name is required')
+        .min(3, 'Monastery name must be at least 3 characters')
+        .optional(),
+      monasteryAddress: z
+        .string('Monastery Address is required')
+        .min(3, 'Monastery Address is required at least 3 characters')
+        .optional(),
       oldPassword: z.string().optional(),
       newPassword: passwordSchema.optional(),
     })
