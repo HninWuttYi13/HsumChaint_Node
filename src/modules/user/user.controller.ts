@@ -1,6 +1,7 @@
 import { generatePaginationData } from '@/helper/paginationHelper';
 import { AppError } from '@/utils/AppError';
 import { successResponse } from '@/utils/response';
+import { uploadToR2 } from '@/utils/s3Storage';
 import type { NextFunction, Request, Response } from 'express';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 import {
@@ -62,6 +63,10 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
   try {
     const { id } = req.params as unknown as idParamsInput;
     const body = req.body as updateUserBodyInput;
+    if (req.file) {
+      const avatarUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
+      body.avatar = avatarUrl;
+    }
     const result = await updateUserService(id, body);
     return successResponse(res, result, 'User is updated successfully');
   } catch (err) {

@@ -16,6 +16,7 @@ model User {
   userType     UserType @map("user_type")
   contactPhone String? 
   monkProfile  MonkProfile?
+  avatar       String? 
   fcmToken     String?  @map("fcm_token")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

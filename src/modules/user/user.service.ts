@@ -10,6 +10,7 @@ export const selectUser = {
   contactPhone: true,
   userType: true,
   createdAt: true,
+  avatar: true,
 } as const;
 //get all use service
 export const getAllUserService = async (data: getAllUsersInput) => {
@@ -103,6 +104,7 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
     ...(data.phone !== undefined && { phone: data.phone }),
     ...(hashedPassword !== undefined && { password: hashedPassword }),
     ...(data.contactPhone !== undefined && { contactPhone: data.contactPhone }),
+    ...(data.avatar !== undefined && { avatar: data.avatar }),
   };
   //build monk profile update separately because it belongs to a separate database
   const monkProfileData: Prisma.MonkProfileUpdateInput = {};

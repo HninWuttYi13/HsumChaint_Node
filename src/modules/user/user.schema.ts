@@ -44,6 +44,7 @@ export const updateUserSchema = z.object({
         .optional(),
       phone: phoneSchema.optional(),
       email: z.string().trim().toLowerCase().email('Invalid email').optional(),
+      avatar: z.string().optional(),
       contactPhone: phoneSchema.optional(),
       monasteryName: z
         .string('Monastery name is required')

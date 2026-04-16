@@ -16,6 +16,12 @@ const envSchema = z.object({
   JWT_REFRESH_TOKEN_SECRET: z.string(),
   JWT_REFRESH_TOKEN_EXPIRES_IN: z.string().default('90d'),
   REDIS_URL: z.string().optional(),
+  R2_ACCOUNT_ID: z.string(),
+  R2_ACCESS_KEY_ID: z.string(),
+  R2_SECRET_ACCESS_KEY: z.string(),
+  R2_BUCKET_NAME: z.string(),
+  R2_ENDPOINT: z.string(),
+  R2_PUBLIC_URL: z.string(),
 });
 
 const parsed = envSchema.safeParse(process.env);
