@@ -104,6 +104,18 @@ describe('updateUserService Integration Test', () => {
       'Old password is incorrect'
     );
   });
+  // Uploading Profile Image Test: accept image if the image extension are jpg, jpeg, png, webp
+  it('should update avatar URL correctly', async () => {
+    //ACT: send avatar url string to user service
+    const updatedData = {
+      avatar: 'https://pub-f23a17c8e42740bc8e9b4c3b6392328b.r2.dev/profiles/test-image.png',
+    };
+    const result = await updateUserService(userId, updatedData);
+    //ASSERT: check the avatar url link store in database
+    expect(result.avatar).toBe(updatedData.avatar);
+    const dbUser = await prisma.user.findUnique({ where: { id: userId } });
+    expect(dbUser?.avatar).toBe(updatedData.avatar);
+  });
   //failed update test: attempt to update with invalid user ID and expect an error to be thrown
   it('should throw an error when trying to update with invalid user ID', async () => {
     const invalidUserId = 9999; //assuming this ID does not exist
