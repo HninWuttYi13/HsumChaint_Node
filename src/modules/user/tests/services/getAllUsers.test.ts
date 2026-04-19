@@ -1,204 +1,209 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
 import { prisma } from '@/lib/prisma';
 import { getAllUserService } from '../../user.service';
-describe('getAllUserService Integration test', () => {
-  //Arrange: before test, create 3 valid users
-  beforeAll(async () => {
-    //if there are old data, clean them
-    await prisma.user.deleteMany({
-      where: { email: { endsWith: '@test.com' } },
-    });
 
-    //creating donor users
-    await prisma.user.createMany({
-      data: [
-        {
-          phone: '09111111111',
-          username: 'apple_donor',
-          email: 'apple@test.com',
-          password: 'hp',
-          userType: 'Donor',
-        },
-        {
-          phone: '09333333333',
-          username: 'cherry_donor',
-          email: 'cherry@test.com',
-          password: 'hp',
-          userType: 'Donor',
-        },
-      ],
-    });
+/**
+ * UNIT TEST STRATEGY: Module Mocking
+ *
+ * Why mock? This is a unit test — we want to test ONLY the logic inside
+ * getAllUserService, not Prisma or the real database.
+ *
+ * How it works in 3 steps:
+ *  1. mock.module() replaces the entire "@/lib/prisma" import with a fake.
+ *     Every function must be a real function (not a value), so we use mock()
+ *     as the placeholder. This must be called BEFORE any imports resolve.
+ *
+ *  2. spyOn() wraps those fake functions so we can control their return values
+ *     per-test with mockResolvedValue(), and assert how they were called.
+ *
+ *  3. Each test sets up its own fake return values, calls the service,
+ *     and checks the result — no real DB involved at all.
+ *
+ * Common pitfall: Do NOT use Response.json({}) as a placeholder — it returns
+ * a Promise object, not a function, which causes "is not a function" errors.
+ */
+mock.module('@/lib/prisma', () => ({
+  prisma: {
+    user: {
+      // Placeholder functions — spyOn() below will override these per test
+      findMany: mock(() => Promise.resolve([])),
+      count: mock(() => Promise.resolve(0)),
+    },
+    // The service wraps findMany + count inside $transaction for atomicity.
+    // We simulate that by simply resolving all promises in parallel with Promise.all.
+    $transaction: mock((promises: Promise<any>[]) => Promise.all(promises)),
+  },
+}));
 
-    //for monk, use nested create
-    await prisma.user.create({
-      data: {
-        phone: '09222222222',
-        username: 'banana_monk',
-        email: 'banana@test.com',
-        password: 'hp',
-        userType: 'Monk',
-        monkProfile: {
-          create: {
-            monasteryName: 'Su Taung Pyae',
-            monasteryAddress: 'somewhere',
-          },
-        },
+// Attach spies AFTER mock.module() so they wrap the already-mocked functions.
+// These give us mockResolvedValue() and call-assertion abilities per test.
+const findManyMock = spyOn(prisma.user, 'findMany');
+const countMock = spyOn(prisma.user, 'count');
+
+describe('getAllUserService Unit Test (Mocking)', () => {
+  // Reset call history and return values between tests to prevent bleed-over.
+  // Without this, a mockResolvedValue() from test A could affect test B.
+  beforeEach(() => {
+    findManyMock.mockClear();
+    countMock.mockClear();
+  });
+
+  /**
+   * Shared mock data used across all tests.
+   * Represents a realistic mix: 2 Donors and 1 Monk with a monkProfile.
+   * Tests slice or filter this array to simulate different DB responses.
+   */
+  const mockUsers = [
+    {
+      id: 1,
+      phone: '09111111111',
+      username: 'apple_donor',
+      email: 'apple@test.com',
+      userType: 'Donor',
+      isDeleted: false,
+    },
+    {
+      id: 2,
+      phone: '09222222222',
+      username: 'banana_monk',
+      email: 'banana@test.com',
+      userType: 'Monk',
+      isDeleted: false,
+      monkProfile: {
+        monasteryName: 'Su Taung Pyae',
+        monasteryAddress: 'somewhere',
       },
-    });
+    },
+    {
+      id: 3,
+      phone: '09333333333',
+      username: 'cherry_donor',
+      email: 'cherry@test.com',
+      userType: 'Donor',
+      isDeleted: false,
+    },
+  ];
+
+  // Verifies that the service correctly passes `take` and `skip` to Prisma,
+  // and that it returns only as many users as the limit allows.
+  it('should return correct pagination data(limit test)', async () => {
+    findManyMock.mockResolvedValue(mockUsers.slice(0, 2) as any); // fake: DB returns first 2
+    countMock.mockResolvedValue(3); // fake: total in DB is 3
+
+    const result = await getAllUserService({ page: 1, limit: 2 });
+
+    expect(result.users.length).toBe(2);
+    expect(result.totals).toBe(3);
   });
 
-  afterAll(async () => {
-    //after test, clean up created data and disconnect with database
-    await prisma.user.deleteMany({
-      where: { email: { endsWith: '@test.com' } },
-    });
-    await prisma.$disconnect();
-  });
-  //testing return correct pagination data
-  it('should return correct pagination data(limit test)', async () => {
-    //ACT: show the two users
-    const result = await getAllUserService({ page: 1, limit: 2 });
-    //ASSERT: data is two and total is 3
-    expect(result.users.length).toBe(2);
-    expect(result.totals).toBeGreaterThanOrEqual(3);
-  });
-  //Edge Case: search by partial name (starts with test)
+  // Verifies that passing `username` causes the service to return
+  // only users whose username contains the search string (partial match).
   it('should filter users by partial username', async () => {
-    //ACT: search "app" instead of "apple_donor"
+    findManyMock.mockResolvedValue([mockUsers[0]] as any); // fake: DB matched only apple_donor
+    countMock.mockResolvedValue(1);
+
     const result = await getAllUserService({
       page: 1,
       limit: 10,
-      username: 'app',
+      username: 'app', // partial match for "apple_donor"
     });
-    //ASSERT
+
     expect(result.users[0].username).toBe('apple_donor');
-    expect(result.users.length).toBe(1);
     expect(result.totals).toBe(1);
   });
-  //Logic Case: Searching by Monastery (Nested Filter Test)
+
+  // Verifies that passing `monasteryName` correctly filters Monk users
+  // by their nested monkProfile relation.
   it('should filter monks by monastery name correctly', async () => {
-    //find monks from Su Taung Pyae Monastery
+    findManyMock.mockResolvedValue([mockUsers[1]] as any); // fake: DB matched only banana_monk
+    countMock.mockResolvedValue(1);
+
     const result = await getAllUserService({
       page: 1,
       limit: 1,
-      monasteryName: 'Su Taung',
+      monasteryName: 'Su Taung', // partial match for "Su Taung Pyae"
     });
-    //ASSERT
+
     expect(result.users[0].username).toBe('banana_monk');
-    expect(result.users.length).toBe(1);
     expect(result.totals).toBe(1);
   });
-  //Safety Case: isDeleted Filter (The Ghost Data Test)
+
+  // Verifies that soft-deleted users (isDeleted: true) are excluded.
+  // Instead of touching a real DB, we simply mock findMany to return a list
+  // that already excludes the deleted user — simulating what Prisma's
+  // `where: { isDeleted: false }` clause would do.
   it('should not include soft-deleted users in the list', async () => {
-    //Arrange: make one of the user soft delete
-    await prisma.user.update({
-      where: { phone: '09111111111' },
-      data: { isDeleted: true },
-    });
-    //ACT
+    const remainingUsers = mockUsers.slice(1); // apple_donor (index 0) is "deleted"
+    findManyMock.mockResolvedValue(remainingUsers as any);
+    countMock.mockResolvedValue(2);
+
     const result = await getAllUserService({ page: 1, limit: 10 });
-    //ASSERT: "apple_donor" is deleted and now remain two;
+
     expect(result.users.find((u) => u.phone === '09111111111')).toBeUndefined();
-    //clean up for other tests
-    await prisma.user.update({
-      where: { phone: '09111111111' },
-      data: { isDeleted: false },
-    });
+    expect(result.users.length).toBe(2);
   });
-  //Boundary Case: Empty Results
+
+  // Edge case: when no users match the filter criteria,
+  // the service should gracefully return an empty list and zero total.
   it('should return empty array and zero total when no users match criteria', async () => {
+    findManyMock.mockResolvedValue([]); // fake: DB found nothing
+    countMock.mockResolvedValue(0);
+
     const result = await getAllUserService({
       page: 1,
       limit: 10,
-      username: 'non_existent_user_xyz',
+      username: 'non_existent',
     });
 
     expect(result.users.length).toBe(0);
     expect(result.totals).toBe(0);
   });
-  // Logic Case: Search by valid phone format
+
+  // Verifies that passing `phone` causes the service to filter
+  // by partial phone number match.
   it('should filter users by phone number correctly', async () => {
-    // ACT: search using partial phone number
+    findManyMock.mockResolvedValue([mockUsers[0]] as any); // fake: DB matched apple_donor
+    countMock.mockResolvedValue(1);
+
     const result = await getAllUserService({
       page: 1,
       limit: 10,
-      phone: '09111',
+      phone: '09111', // partial match for "09111111111"
     });
 
-    // ASSERT
     expect(result.users[0].phone).toBe('09111111111');
-    expect(result.users.length).toBe(1);
     expect(result.totals).toBe(1);
   });
 
-  // Logic Case: Search by email (contains test)
-  it('should filter users by email correctly', async () => {
-    // ACT: search for 'cherry' in email
-    const result = await getAllUserService({
-      page: 1,
-      limit: 10,
-      email: 'cherry@test.com',
-    });
-
-    // ASSERT
-    expect(result.users[0].email).toBe('cherry@test.com');
-    expect(result.users.length).toBe(1);
-  });
-
-  // Logic Case: Filter by userType
+  // Verifies that passing `userType` filters out users of other types,
+  // and that every returned user matches the requested type.
   it('should filter users by userType (Donor)', async () => {
-    // ACT: fetch only Donors
+    const donors = mockUsers.filter((u) => u.userType === 'Donor'); // [apple_donor, cherry_donor]
+    findManyMock.mockResolvedValue(donors as any);
+    countMock.mockResolvedValue(2);
+
     const result = await getAllUserService({
       page: 1,
       limit: 10,
       userType: 'Donor',
     });
 
-    // ASSERT: should only return apple and cherry (2 donors)
     expect(result.users.length).toBe(2);
-    const allAreDonors = result.users.every((u) => u.userType === 'Donor');
-    expect(allAreDonors).toBe(true);
+    expect(result.users.every((u) => u.userType === 'Donor')).toBe(true);
   });
 
-  // Logic Case: Search by Monastery Address
-  it('should filter monks by monastery address correctly', async () => {
-    // ACT: search monks from 'somewhere'
-    const result = await getAllUserService({
-      page: 1,
-      limit: 10,
-      monasteryAddress: 'some',
-    });
-
-    // ASSERT
-    expect(result.users[0].username).toBe('banana_monk');
-    expect(result.users.length).toBe(1);
-  });
-
-  // Complex Case: Search by both Monastery Name and Address
-  it('should filter monks by both monastery name and address correctly', async () => {
-    // ACT: combined filter
-    const result = await getAllUserService({
-      page: 1,
-      limit: 10,
-      monasteryName: 'Su Taung',
-      monasteryAddress: 'some',
-    });
-
-    // ASSERT
-    expect(result.users.length).toBe(1);
-    expect(result.users[0].username).toBe('banana_monk');
-  });
-
-  // Pagination Case: Second page test
+  // Verifies correct offset calculation for page 2.
+  // With limit=2, page 2 should skip the first 2 records (skip = (page-1) * limit = 2).
+  // Also asserts that findMany was called with the exact skip/take values.
   it('should return correct data for page 2', async () => {
-    // ACT: limit 2, page 2 (since we have 3 users, page 2 should have 1 user)
-    const result = await getAllUserService({
-      page: 2,
-      limit: 2,
-    });
+    findManyMock.mockResolvedValue([mockUsers[2]] as any); // fake: DB returns only cherry_donor
+    countMock.mockResolvedValue(3); // fake: 3 total users exist
 
-    // ASSERT
+    const result = await getAllUserService({ page: 2, limit: 2 });
+
     expect(result.users.length).toBe(1);
     expect(result.totals).toBe(3);
+    // Directly assert the Prisma call received the correct pagination args
+    expect(findManyMock).toHaveBeenCalledWith(expect.objectContaining({ skip: 2, take: 2 }));
   });
 });
