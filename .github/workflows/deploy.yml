@@ -47,12 +47,18 @@ jobs:
           JWT_ACCESS_TOKEN_EXPIRES_IN: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRES_IN }}
           JWT_REFRESH_TOKEN_SECRET: ${{ secrets.JWT_REFRESH_TOKEN_SECRET }}
           JWT_REFRESH_TOKEN_EXPIRES_IN: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRES_IN }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ vars.R2_BUCKET_NAME }}
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.DO_SSH_KEY }}
           passphrase: ${{ secrets.DO_SSH_PASSPHRASE }}
-          envs: MYSQL_ROOT_PASSWORD,REDIS_PASSWORD,DB_NAME,MYSQL_USER,MYSQL_PASSWORD,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_EXPIRES_IN,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_EXPIRES_IN
+          envs: MYSQL_ROOT_PASSWORD,REDIS_PASSWORD,DB_NAME,MYSQL_USER,MYSQL_PASSWORD,JWT_ACCESS_TOKEN_SECRET,JWT_ACCESS_TOKEN_EXPIRES_IN,JWT_REFRESH_TOKEN_SECRET,JWT_REFRESH_TOKEN_EXPIRES_IN,R2_ACCOUNT_ID,R2_ACCESS_KEY_ID,R2_SECRET_ACCESS_KEY,R2_BUCKET_NAME,R2_ENDPOINT,R2_PUBLIC_URL
           script: |
             PROJECT_DIR="$HOME/app-${{ github.ref_name }}"
             mkdir -p $PROJECT_DIR && cd $PROJECT_DIR
@@ -75,6 +81,12 @@ jobs:
             JWT_ACCESS_TOKEN_EXPIRES_IN=$JWT_ACCESS_TOKEN_EXPIRES_IN
             JWT_REFRESH_TOKEN_SECRET=$JWT_REFRESH_TOKEN_SECRET
             JWT_REFRESH_TOKEN_EXPIRES_IN=$JWT_REFRESH_TOKEN_EXPIRES_IN
+            R2_ACCOUNT_ID=$R2_ACCOUNT_ID
+            R2_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID
+            R2_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY
+            R2_BUCKET_NAME=$R2_BUCKET_NAME
+            R2_ENDPOINT=$R2_ENDPOINT
+            R2_PUBLIC_URL=$R2_PUBLIC_URL
             EOF
 
             # Login and Pull
@@ -104,8 +116,47 @@ jobs:
               -w /app \
               oven/bun:1.3.10 sh -c "bun add dotenv prisma && bunx prisma migrate deploy"
 
+  health-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for service to be ready
+        run: sleep 10
+
+      - name: Check API health
+        id: health
+        run: |
+          API_URL="${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}"
+          HEALTH_URL="${API_URL}/health"
+          
+          echo "Checking health at: $HEALTH_URL"
+          
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" --connect-timeout 10 --max-time 30 || echo "000")
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "status=up" >> $GITHUB_OUTPUT
+            echo "API is UP (HTTP $HTTP_CODE)"
+          else
+            echo "status=down" >> $GITHUB_OUTPUT
+            echo "API is DOWN (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Report health status
+        if: always()
+        uses: ./.github/workflows/reusable-telegram.yml
+        with:
+          message: |
+            ${{ steps.health.outputs.status == 'up' && '✅' || '❌' }} <b>API Health Check ${{ steps.health.outputs.status == 'up' && 'UP' || 'DOWN' }}</b>
+
+            🌿 <b>Branch:</b> <code>${{ github.ref_name }}</code>
+            🏷️ <b>Environment:</b> ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
+            🔗 <b>API URL:</b> ${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}/health
+            📊 <b>Status:</b> ${{ steps.health.outputs.status == 'up' && '✅ Running' || '❌ Not Responding' }}
+       
+
   notify:
-    needs: [build-and-push, deploy]
+    needs: [build-and-push, deploy, health-check]
     if: always()
     uses: ./.github/workflows/reusable-telegram.yml
     with:
@@ -120,4 +171,4 @@ jobs:
 
         🔗 <b>API URL:</b> https://hsum-chaint-node-api.invisigate.asia/
         📋 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Logs</a>
-    secrets: inherit
+    
