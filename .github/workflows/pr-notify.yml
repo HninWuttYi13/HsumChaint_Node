@@ -11,6 +11,7 @@ jobs:
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: development
       format: HTML
       message: |
         <b>🔔 New PR Opened</b>
@@ -26,6 +27,7 @@ jobs:
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: development
       format: HTML
       message: |
         <b>🔄 PR Updated</b>
@@ -40,6 +42,7 @@ jobs:
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: development
       format: HTML
       message: |
         <b>🔔 PR Merged</b>

@@ -44,6 +44,7 @@ jobs:
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: development
       message: |
         <b>❌ Branch Policy Failed</b>
         <b>Project:</b> NodeJS

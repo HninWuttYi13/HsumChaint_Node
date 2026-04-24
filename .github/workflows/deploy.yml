@@ -141,9 +141,9 @@ jobs:
           fi
 
   health-notify:
+    uses: ./.github/workflows/reusable-telegram.yml
     needs: health-check
     if: always()
-    uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
       environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
@@ -156,9 +156,9 @@ jobs:
         📊 <b>Status:</b> ${{ needs.health-check.outputs.status == 'up' && '✅ Running' || '❌ Not Responding' }}
 
   notify:
+    uses: ./.github/workflows/reusable-telegram.yml
     needs: [build-and-push, deploy, health-check, health-notify]
     if: always()
-    uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
       environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
