@@ -63,7 +63,6 @@ jobs:
             PROJECT_DIR="$HOME/app-${{ github.ref_name }}"
             mkdir -p $PROJECT_DIR && cd $PROJECT_DIR
 
-            # Set up .env
             cat <<EOF > .env
             IMAGE_NAME=ghcr.io/${{ needs.build-and-push.outputs.repo_name }}:${{ github.ref_name }}
             NODE_ENV=${{ github.ref_name == 'main' && 'production' || 'development' }}
@@ -89,24 +88,21 @@ jobs:
             R2_PUBLIC_URL=$R2_PUBLIC_URL
             EOF
 
-            # Login and Pull
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            # Download config files
-            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/nginx.conf -o nginx.conf
-            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/docker-compose-${{ github.ref_name }}.yaml -o docker-compose.yml
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/nginx.conf -o nginx.conf &
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/docker-compose-${{ github.ref_name }}.yaml -o docker-compose.yml &
+            curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/prisma.config.ts -o $PROJECT_DIR/prisma.config.ts &
+            wait
 
-            # Deploy
             docker compose pull
             docker compose up -d --remove-orphans
 
-            # Database Migration
             APP_CONTAINER=${{ github.ref_name == 'main' && 'hsumchaint_node_production' || 'hsumchaint_node_develop' }}
             rm -rf $PROJECT_DIR/prisma
             docker cp $APP_CONTAINER:/app/prisma $PROJECT_DIR/prisma
             curl -L https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/prisma.config.ts -o $PROJECT_DIR/prisma.config.ts
             printf 'DATABASE_URL=mysql://root:%s@mysql:3306/%s\n' "$MYSQL_ROOT_PASSWORD" "$DB_NAME" > $PROJECT_DIR/migration.env
-            cat $PROJECT_DIR/migration.env
             docker run --rm \
               --network app-${{ github.ref_name }}_app-network \
               --env-file $PROJECT_DIR/migration.env \
@@ -114,25 +110,27 @@ jobs:
               -v $PROJECT_DIR/prisma.config.ts:/app/prisma.config.ts \
               -v $PROJECT_DIR/migration.env:/app/.env \
               -w /app \
-              oven/bun:1.3.10 sh -c "bun add dotenv prisma && bunx prisma migrate deploy"
+              oven/bun:1.3.10 sh -c "bunx prisma migrate deploy"
 
   health-check:
     needs: deploy
     runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.health.outputs.status }}
     steps:
       - name: Wait for service to be ready
-        run: sleep 30
+        run: sleep 60
 
       - name: Check API health
         id: health
         run: |
           API_URL="${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}"
           HEALTH_URL="${API_URL}/health"
-          
+
           echo "Checking health at: $HEALTH_URL"
-          
+
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" --connect-timeout 10 --max-time 30 || echo "000")
-          
+
           if [ "$HTTP_CODE" = "200" ]; then
             echo "status=up" >> $GITHUB_OUTPUT
             echo "API is UP (HTTP $HTTP_CODE)"
@@ -142,23 +140,27 @@ jobs:
             exit 1
           fi
 
-      - name: Report health status
-        if: always()
-        uses: ./.github/workflows/reusable-telegram.yml
-        with:
-          message: |
-            ${{ steps.health.outputs.status == 'up' && '✅' || '❌' }} <b>API Health Check ${{ steps.health.outputs.status == 'up' && 'UP' || 'DOWN' }}</b>
+  health-notify:
+    needs: health-check
+    if: always()
+    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
+    uses: ./.github/workflows/reusable-telegram.yml
+    secrets: inherit
+    with:
+      message: |
+        ${{ needs.health-check.outputs.status == 'up' && '✅' || '❌' }} <b>API Health Check ${{ needs.health-check.outputs.status == 'up' && 'UP' || 'DOWN' }}</b>
 
-            🌿 <b>Branch:</b> <code>${{ github.ref_name }}</code>
-            🏷️ <b>Environment:</b> ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
-            🔗 <b>API URL:</b> ${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}/health
-            📊 <b>Status:</b> ${{ steps.health.outputs.status == 'up' && '✅ Running' || '❌ Not Responding' }}
-       
+        🌿 <b>Branch:</b> <code>${{ github.ref_name }}</code>
+        🏷️ <b>Environment:</b> ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
+        🔗 <b>API URL:</b> ${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}/health
+        📊 <b>Status:</b> ${{ needs.health-check.outputs.status == 'up' && '✅ Running' || '❌ Not Responding' }}
 
   notify:
-    needs: [build-and-push, deploy, health-check]
+    needs: [build-and-push, deploy, health-check, health-notify]
     if: always()
+    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     uses: ./.github/workflows/reusable-telegram.yml
+    secrets: inherit
     with:
       message: |
         ${{ needs.deploy.result == 'success' && '✅' || '❌' }} <b>Deploy ${{ needs.deploy.result == 'success' && 'Successful' || 'Failed' }}</b>
@@ -169,6 +171,5 @@ jobs:
         👤 <b>Actor:</b> ${{ github.actor }}
         💬 <b>Commit:</b> <code>${{ github.event.head_commit.message }}</code>
 
-        🔗 <b>API URL:</b> https://hsum-chaint-node-api.invisigate.asia/
+        🔗 <b>API URL:</b> ${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}/
         📋 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Logs</a>
-    
