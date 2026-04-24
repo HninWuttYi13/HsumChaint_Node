@@ -10,6 +10,9 @@ on:
         required: false
         type: string
         default: "HTML"
+      environment:
+        required: false
+        type: string
     secrets:
       TELEGRAM_CHAT_ID:
         required: false
@@ -21,6 +24,7 @@ on:
 jobs:
   send:
     runs-on: ubuntu-slim
+    environment: ${{ inputs.environment }}
     steps:
       - name: send message
         env:

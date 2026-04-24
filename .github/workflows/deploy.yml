@@ -143,10 +143,10 @@ jobs:
   health-notify:
     needs: health-check
     if: always()
-    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
       message: |
         ${{ needs.health-check.outputs.status == 'up' && '✅' || '❌' }} <b>API Health Check ${{ needs.health-check.outputs.status == 'up' && 'UP' || 'DOWN' }}</b>
 
@@ -158,10 +158,10 @@ jobs:
   notify:
     needs: [build-and-push, deploy, health-check, health-notify]
     if: always()
-    environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: ${{ github.ref_name == 'main' && 'production' || 'development' }}
       message: |
         ${{ needs.deploy.result == 'success' && '✅' || '❌' }} <b>Deploy ${{ needs.deploy.result == 'success' && 'Successful' || 'Failed' }}</b>
 
