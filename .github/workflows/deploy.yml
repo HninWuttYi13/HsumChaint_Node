@@ -124,7 +124,7 @@ jobs:
       - name: Check API health
         id: health
         run: |
-          API_URL="${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}"
+          API_URL="https://hsum-chaint-node-api.invisigate.asia"
           HEALTH_URL="${API_URL}/health"
 
           echo "Checking health at: $HEALTH_URL"
@@ -152,7 +152,7 @@ jobs:
 
         🌿 <b>Branch:</b> <code>${{ github.ref_name }}</code>
         🏷️ <b>Environment:</b> ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
-        🔗 <b>API URL:</b> ${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}/health
+        🔗 <b>API URL:</b> https://hsum-chaint-node-api.invisigate.asia/health
         📊 <b>Status:</b> ${{ needs.health-check.outputs.status == 'up' && '✅ Running' || '❌ Not Responding' }}
 
   notify:
@@ -171,5 +171,5 @@ jobs:
         👤 <b>Actor:</b> ${{ github.actor }}
         💬 <b>Commit:</b> <code>${{ github.event.head_commit.message }}</code>
 
-        🔗 <b>API URL:</b> ${{ github.ref_name == 'main' && 'https://hsum-chaint-node-api.invisigate.asia' || 'https://hsum-chaint-node-api-dev.invisigate.asia' }}/
+        🔗 <b>API URL:</b> https://hsum-chaint-node-api.invisigate.asia/
         📋 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Logs</a>
