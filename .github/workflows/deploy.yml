@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for service to be ready
-        run: sleep 10
+        run: sleep 30
 
       - name: Check API health
         id: health
