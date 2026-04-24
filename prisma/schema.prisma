@@ -49,26 +49,6 @@ model Donor {
 
 }
 
-model Monastery {
-  id              Int      @id @default(autoincrement())
-  name            String
-  description     String?
-  address         String
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  createdById     Int @unique  @map("created_by_id")
-  createdBy       monasteryMember? @relation("MonasteryCreatedBy", fields: [createdById], references: [id])
-  monasteryMember monasteryMember[] @relation("MonasteryMembers")
-  donationList    DonationList[]
-  invitations     Invitation[]
-
-  @@index([name])
-  @@index([address])
-  @@map("monasteries")
-}
-
-
 model RefreshToken {
   id           Int       @id @default(autoincrement())
   userId       Int       @map("user_id")
@@ -81,81 +61,6 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
-}
-
-model UserSetting {
-  id                      Int       @id @default(autoincrement())
-  userId                  Int       @unique @map("user_id")
-  pickupTime              DateTime? @map("pickup_time")
-  dropoffTime             DateTime? @map("dropoff_time")
-  dropoffNotificationTime DateTime? @map("dropoff_notification_time")
-  pickupNotificationTime  DateTime? @map("pickup_notification_time")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("user_settings")
-}
-
-model Notification {
-  id        Int             @id @default(autoincrement())
-  userId    Int             @map("user_id")
-  type      NotificationType
-  message   String
-  isRead    Boolean         @default(false) @map("is_read")
-  createdAt DateTime        @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([type])
-  @@map("notifications")
-}
-
-
-model Invitation {
-  id               Int             @id @default(autoincrement())
-  role             InvitationRole
-  status           InvitationStatus @default(pending)
-  createdAt        DateTime        @default(now()) @map("created_at")
-
-  monasteryId      Int             @map("monastery_space_id")
-  monastery  Monastery @relation(fields: [monasteryId], references: [id], onDelete: Cascade)
-  invitedUserId    Int             @map("invited_user_id")
-  invitedUser User     @relation("InvitationInvitee", fields: [invitedUserId], references: [id], onDelete: Cascade)
-  invitedById      Int             @map("invited_by_id")
-  invitedBy   User     @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
-
-  @@index([monasteryId])
-  @@index([invitedUserId])
-  @@index([invitedById])
-  @@index([status])
-  @@map("invitations")
-}
-
-model monasteryMember {
-  id          Int                 @id @default(autoincrement())
-  role        monasteryMemberRole
-  isOwner     Boolean             @map("is_owner")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt  @map("updated_at")
-
-  monasteryId Int                 @map("monastery_id")
-  monastery   Monastery           @relation("MonasteryMembers", fields: [monasteryId], references: [id])
-  userId      Int?                @map("user_id")
-  user        User?               @relation("UserMembership", fields: [userId], references: [id])
-
-  // Opposite field for Monastery.createdBy
-  createdMonastery Monastery?     @relation("MonasteryCreatedBy")
-
-  // Opposite field for User.monk (kept relation unidirectional on purpose)
-  monkUser   User?               @relation("UserMonk")
-  donationListsAsReviewer DonationList[]
-
-  @@index([isOwner])
-  @@index([role])
-  @@map("monastery_members")
-
 }
 
 model DonationList {
