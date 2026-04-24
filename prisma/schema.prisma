@@ -16,12 +16,15 @@ model User {
   userType     UserType @map("user_type")
   contactPhone String? 
   monkProfile  MonkProfile?
+  avatar       String? 
   fcmToken     String?  @map("fcm_token")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   isDeleted    Boolean  @default(false) @map("is_deleted")
   refreshToken RefreshToken[]
   resetToken   PasswordResetToken[]
+  @@index([isDeleted, userType, createdAt(sort: Desc)])
+  @@index([username])
   @@index([contactPhone])
   @@map("users")
 }
@@ -47,6 +50,8 @@ model MonkProfile {
   monasteryName    String @map("monastery_name")
   monasteryAddress String @map("monastery_address")
   user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([monasteryName])
+@@index([monasteryAddress])
   @@map("monk_profile")
 }
 model PasswordResetToken {

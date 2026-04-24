@@ -1,0 +1,50 @@
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
+import { authMiddleware } from '@/middlewares/authMiddleWare';
+import { AppError } from '@/utils/AppError';
+import { type TokenPayload, generateAccessToken } from '@/utils/jwt';
+describe('authMiddleware Unit Test', () => {
+  let mockReq: any;
+  let mockRes: any;
+  let next: any;
+  //Arrange: Set up the mock request, response, and next function before each test
+  beforeEach(() => {
+    mockReq = { headers: {} }; //simulates incoming request with empty headers
+    mockRes = {}; //not used here because middleware uses next(error) to handle errors
+    next = vi.fn(); //mock function to track calls to next()
+  });
+  //Test case 1: No Authorization Header
+  it('should throw 401 if Authorization header is missing', () => {
+    authMiddleware(mockReq, mockRes, next);
+    const error = next.mock.calls[0][0];
+    expect(error).toBeInstanceOf(AppError);
+    expect(error.statusCode).toBe(401);
+    expect(error.message).toBe('Unauthorized');
+  });
+  //Test case 2: Invalid Format (No Bearer Token)
+  it('should throw 401 of token format is not Bearer', () => {
+    mockReq.headers.authorization = 'Basic validtoken';
+    authMiddleware(mockReq, mockRes, next);
+    const error = next.mock.calls[0][0];
+    expect(error).toBeInstanceOf(AppError);
+    expect(error.statusCode).toBe(401);
+    expect(error.message).toBe('Unauthorized');
+  });
+  //Test case 3: Valid Token
+  it('should attach user to req and call next() if token is valid', () => {
+    const payload: TokenPayload = { userId: 1, userType: 'Monk' };
+    const token = generateAccessToken(payload);
+    mockReq.headers.authorization = `Bearer ${token}`;
+    authMiddleware(mockReq, mockRes, next);
+    expect(next).toHaveBeenCalledWith(); //next() should be called without arguments
+    expect(mockReq.user).toMatchObject(payload); //req.user should be set to the decoded payload
+  });
+  //Test case  4: Invalid/ Expired Token
+  it('should throw 401 if token is invalid or expired', () => {
+    mockReq.headers.authorization = 'Bearer fake_token';
+    authMiddleware(mockReq, mockRes, next);
+    const error = next.mock.calls[0][0];
+    expect(error).toBeInstanceOf(AppError);
+    expect(error.statusCode).toBe(401);
+    expect(error.message).toBe('Invalid or expired token');
+  });
+});

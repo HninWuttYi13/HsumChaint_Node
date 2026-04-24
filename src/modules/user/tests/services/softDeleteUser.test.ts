@@ -1,0 +1,111 @@
+import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import { prisma } from '@/lib/prisma';
+import { softDeleteUserService } from '../../user.service';
+
+/**
+ * UNIT TEST STRATEGY: Module Mocking
+ *
+ * softDeleteUserService has two sequential Prisma calls:
+ *  1. findUnique — checks the user exists and is not already deleted
+ *  2. update     — sets isDeleted: true if the check passes
+ *
+ * We mock both so we can:
+ *  - Simulate different DB states (active user, already deleted, not found)
+ *    without touching a real DB.
+ *  - Assert that update is called with exactly the right arguments.
+ *  - Assert that update is NOT called at all when the guard check fails.
+ *
+ * Note: unlike getAllUsers, this service does NOT use $transaction,
+ * so we only need to mock findUnique and update — no $transaction needed.
+ */
+mock.module('@/lib/prisma', () => ({
+  prisma: {
+    user: {
+      findFirst: mock(() => Promise.resolve(null)),
+      update: mock(() => Promise.resolve(null)),
+    },
+  },
+}));
+
+// Attach spies AFTER mock.module() so they wrap the already-mocked functions.
+// findUniqueMock — controls what "DB state" the service sees before acting.
+// updateMock     — lets us verify the correct update payload was sent.
+const findFirstMock = spyOn(prisma.user, 'findFirst');
+const updateMock = spyOn(prisma.user, 'update');
+
+describe('softDeleteUserService Unit Test (Mocking)', () => {
+  // Clear call history and return values between tests to prevent bleed-over.
+  // Critical here because test order matters — a stale mockResolvedValue
+  // from the happy path could mask a failure in the error path tests.
+  beforeEach(() => {
+    findFirstMock.mockClear();
+    updateMock.mockClear();
+  });
+
+  /**
+   * Shared mock user — represents an active (non-deleted) user in the DB.
+   * Tests that simulate deleted/missing states override this inline.
+   */
+  const mockUser = {
+    id: 444,
+    username: 'ghost_user',
+    email: 'ghost@test.com',
+    isDeleted: false, // active — eligible for soft deletion
+  };
+
+  // Happy path: user exists and is active, so the service should:
+  //  1. Find the user via findUnique
+  //  2. Call update with { isDeleted: true }
+  //  3. Return the updated user object
+  it('should soft delete user by setting isDeleted to true', async () => {
+    // Arrange: findUnique returns an active user, update returns the mutated version
+    findFirstMock.mockResolvedValue(mockUser as any);
+    updateMock.mockResolvedValue({ ...mockUser, isDeleted: true } as any);
+
+    const result = await softDeleteUserService({ id: 444 });
+
+    // Assert the returned data is correct
+    expect(result.username).toBe('ghost_user');
+
+    // Assert update was called with exactly the right payload —
+    // this confirms the service isn't sending extra/wrong fields.
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 444 },
+        data: { isDeleted: true },
+      })
+    );
+  });
+
+  // Guard check — already deleted: if findUnique returns a user where
+  // isDeleted is already true, the service should reject early and
+  // never reach the update call.
+  it('should throw an error if the user is already soft-deleted', async () => {
+    // Arrange: simulate a user that was previously soft-deleted
+    findFirstMock.mockResolvedValue(null);
+
+    // Act & Assert: service should throw before calling update
+    await expect(softDeleteUserService({ id: 444 })).rejects.toThrow(
+      'User is not found or already deleted'
+    );
+
+    // Extra safety: confirm update was never reached
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  // Guard check — not found: if findUnique returns null (no matching row),
+  // the service should throw the same error as the already-deleted case,
+  // so callers can't distinguish "never existed" from "was deleted".
+  it('should throw an error if the user ID does not exist', async () => {
+    // Arrange: simulate a DB miss — no user with this ID
+    findFirstMock.mockResolvedValue(null);
+
+    // Act & Assert: service should throw before calling update
+    await expect(softDeleteUserService({ id: 999 })).rejects.toThrow(
+      'User is not found or already deleted'
+    );
+
+    // Extra safety: confirm update was never reached
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});
