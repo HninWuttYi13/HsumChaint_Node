@@ -32,11 +32,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // Logging
 app.use(httpLogger);
+
 // Routes
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/donors', donorRouter);
 
-app.use('/api/v1/auth', authRoutes);
 // Health check
 app.get('/health', (_, res) => {
   return successResponse(res, { status: 'ok', timestamp: new Date() }, 'Health check');

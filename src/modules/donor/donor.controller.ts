@@ -1,9 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { PaginationQueryType } from '../../helper/paginationSchema';
+import { successResponse } from '../../utils/response';
 import type { CreateDonorType, GetAllDonorsQueryType, UpdateDonorType } from './donor.schema';
 
-type IdParam = { id: string };
-import { successResponse } from '../../utils/response';
+type DonorIdParam = { id: string };
+
 import {
   createDonorService,
   deleteDonorService,
@@ -43,9 +44,17 @@ const getAllDonors = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-const getDonorById = async (req: Request<IdParam>, res: Response, next: NextFunction) => {
+const getDonorById = async (req: Request<DonorIdParam>, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
+
+    if (Number.isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid donor ID. ID must be a number.',
+      });
+    }
+
     const donor = await getDonorByIdService(id);
     return successResponse(res, donor, 'Donor retrieved successfully');
   } catch (error) {
@@ -54,7 +63,7 @@ const getDonorById = async (req: Request<IdParam>, res: Response, next: NextFunc
 };
 
 const updateDonor = async (
-  req: Request<IdParam, unknown, UpdateDonorType['body']>,
+  req: Request<DonorIdParam, unknown, UpdateDonorType['body']>,
   res: Response,
   next: NextFunction
 ) => {
@@ -67,7 +76,7 @@ const updateDonor = async (
   }
 };
 
-const deleteDonor = async (req: Request<IdParam>, res: Response, next: NextFunction) => {
+const deleteDonor = async (req: Request<DonorIdParam>, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
     const donor = await deleteDonorService(id);
@@ -77,4 +86,104 @@ const deleteDonor = async (req: Request<IdParam>, res: Response, next: NextFunct
   }
 };
 
-export { createDonor, getAllDonors, getDonorById, updateDonor, deleteDonor };
+import type {
+  CreateDonationListType,
+  GetAllDonationListsQueryType,
+  UpdateDonationListType,
+} from './donor.schema';
+
+type DonationListIdParam = { id: string };
+
+import {
+  createDonationListService,
+  deleteDonationListService,
+  getAllDonationListsService,
+  getDonationListByIdService,
+  updateDonationListService,
+} from './donor.service';
+
+const createDonationList = async (
+  req: Request<unknown, unknown, CreateDonationListType['body']>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (req.body == null || typeof req.body !== 'object') {
+      return next(new Error('Request body is required'));
+    }
+    const donationList = await createDonationListService({ body: req.body });
+    return successResponse(res, donationList, 'Donation list created successfully', 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAllDonationLists = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { title, status, monasteryId, page, limit } =
+      req.query as unknown as GetAllDonationListsQueryType['query'] & PaginationQueryType;
+    const result = await getAllDonationListsService(
+      req,
+      { title, status, monasteryId },
+      { page: Number(page) || 1, limit: Number(limit) || 10 }
+    );
+    return successResponse(res, result, 'Donation lists retrieved successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDonationListById = async (
+  req: Request<DonationListIdParam>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = Number(req.params.id);
+    const donationList = await getDonationListByIdService(id);
+    return successResponse(res, donationList, 'Donation list retrieved successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateDonationList = async (
+  req: Request<DonationListIdParam, unknown, UpdateDonationListType['body']>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = Number(req.params.id);
+    const donationList = await updateDonationListService(id, { body: req.body });
+    return successResponse(res, donationList, 'Donation list updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteDonationList = async (
+  req: Request<DonationListIdParam>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = Number(req.params.id);
+    const donationList = await deleteDonationListService(id);
+    return successResponse(res, donationList, 'Donation list deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export {
+  createDonor,
+  getAllDonors,
+  getDonorById,
+  updateDonor,
+  deleteDonor,
+  createDonationList,
+  getAllDonationLists,
+  getDonationListById,
+  updateDonationList,
+  deleteDonationList,
+};

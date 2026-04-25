@@ -1,0 +1,12 @@
+{
+  "title": "Monthly Breakfast Donation",
+  "description": "Regular breakfast donations for the monastery",
+  "address": "123 Temple Street, City, State 12345",
+  "donationDate": "2026-05-01T08:00:00.000Z",
+  "recurrence": "Monthly",
+  "addReminder": true,
+  "monasteryId": 1,
+  "reviewerId": 2,
+  "donationTypeId": 1,
+  "donorIds": [1, 2, 3]
+}

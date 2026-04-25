@@ -15,6 +15,26 @@ enum UserType {
   Donor
 }
 
+
+enum DonationStatus {
+  Pending
+  Confirmed
+  Completed
+  Cancelled
+}
+
+enum DonationRecurrence {
+  OneTime
+  Weekly
+  Monthly
+}
+
+enum DonationTypeName {
+  Breakfast
+  Lunch
+  Dinner
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   phone        String   @unique
@@ -37,56 +57,46 @@ model Donor {
   phoneNo   String   @map("phone_no")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt  @map("updated_at")
-
-  user         User?
-  donationList DonationList[]
+  donationListDonors DonationListDonor[]
 
   @@unique([id, name])
   @@index([name, email])
   @@index([phoneNo])
   @@index([email])
   @@map("donors")
-
-}
-
-model RefreshToken {
-  id           Int       @id @default(autoincrement())
-  userId       Int       @map("user_id")
-  refreshToken String    @map("refresh_token")
-  expiresAt    DateTime  @map("expires_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  revokedAt    DateTime? @map("revoked_at")
-
-  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("refresh_tokens")
 }
 
 model DonationList {
-  id              Int            @id @default(autoincrement())
-  status          DonationStatus @default(Pending)
-  donationDueDate DateTime       @map("donation_due_date")
-  createdDate     DateTime       @map("created_date")
-  updatedDate     DateTime?      @map("update_at")
+  id              Int               @id @default(autoincrement())
+  title           String
+  description     String?           @map("description")
+  address         String?           @map("address")
+  status          DonationStatus    @default(Pending)
+  donationDate    DateTime          @map("donation_due_date")
+  recurrence      DonationRecurrence @default(OneTime)
+  addReminder     Boolean           @default(false) @map("add_reminder")
+  createdDate     DateTime          @map("created_date")
+  updatedDate     DateTime?         @map("update_at")
 
-  monasteryId    Int            @map("monastery_id")
-  monastery      Monastery      @relation(fields: [monasteryId], references: [id])
-  donorName      String         @unique @map("donor_name")
-  donorId        Int            @map("donor_id")
-  donor          Donor          @relation(fields: [donorId, donorName], references: [id, name])
-  reviewerId     Int?           @map("reviewer_id")
-  reviewer       monasteryMember? @relation(fields: [reviewerId], references: [id])
-  donationTypeId Int            @map("donation_type_id")
-  donationType   DonationType   @relation(fields: [donationTypeId], references: [id])
+  donationTypeId  Int               @map("donation_type_id")
+  donationType    DonationType      @relation(fields: [donationTypeId], references: [id])
+  donors          DonationListDonor[]
 
-  @@index([donorId])
   @@index([donationTypeId])
-  @@index([monasteryId])
-  @@index([reviewerId])
-  @@index([donorId, donationDueDate])
   @@index([status])
   @@map("donation_lists")
+}
+
+model DonationListDonor {
+  id             Int          @id @default(autoincrement())
+  donationList   DonationList @relation(fields: [donationListId], references: [id])
+  donationListId Int          @map("donation_list_id")
+  donor          Donor        @relation(fields: [donorId], references: [id])
+  donorId        Int          @map("donor_id")
+
+  @@index([donationListId])
+  @@index([donorId])
+  @@map("donation_list_donors")
 }
 
 model DonationType {

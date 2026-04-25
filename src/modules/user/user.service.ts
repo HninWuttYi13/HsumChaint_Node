@@ -4,10 +4,13 @@ import type { CreateUser, User } from './user.schema';
 export class UserService {
   async getAllUsers(): Promise<User[]> {
     return prisma.user.findMany({
-      include: {
-        _count: {
-          select: { posts: true },
-        },
+      select: {
+        id: true,
+        phone: true,
+        username: true,
+        email: true,
+        userType: true,
+        createdAt: true,
       },
     }) as unknown as User[];
   }
@@ -15,6 +18,14 @@ export class UserService {
   async getUserById(id: number): Promise<User | null> {
     return prisma.user.findUnique({
       where: { id },
+      select: {
+        id: true,
+        phone: true,
+        username: true,
+        email: true,
+        userType: true,
+        createdAt: true,
+      },
     }) as unknown as User | null;
   }
 

@@ -1,0 +1,11 @@
+{
+  "title": "One-time Lunch Donation",
+  "description": "Special lunch donation for temple event",
+  "address": "456 Monastery Road, Town, State 67890",
+  "donationDate": "2026-04-30T12:00:00.000Z",
+  "recurrence": "OneTime",
+  "addReminder": false,
+  "monasteryId": 1,
+  "donationTypeId": 2,
+  "donorIds": [1]
+}
