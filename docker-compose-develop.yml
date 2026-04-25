@@ -1,6 +1,9 @@
 services:
   app:
     image: ${IMAGE_NAME}
+    build:
+      context: .
+      dockerfile: docker/development.Dockerfile
     container_name: hsumchaint_node_develop
     restart: unless-stopped
     ports:
@@ -17,15 +20,16 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: hsumchaint_db_develop
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_ROOT_HOST=%
-      - MYSQL_DATABASE=${DB_NAME}
+    container_name: hsumchaint_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3306:3306"
     volumes:
       - hsumchaint_db_develop:/var/lib/mysql
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}" ]
       interval: 10s
       timeout: 5s
       retries: 5
