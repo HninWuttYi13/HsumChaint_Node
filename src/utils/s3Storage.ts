@@ -1,6 +1,6 @@
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { env } from '@/config/env';
 import { s3Client } from '@/lib/r2';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { AppError } from './AppError';
 export const uploadToR2 = async (fileBuffer: Buffer, fileName: string, contentType: string) => {
   //create unique file key where file live in R2

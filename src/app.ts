@@ -9,8 +9,10 @@ import { swaggerSpec } from './config/swagger';
 import { globalErrorHandler } from './middlewares/errorHandler';
 import { httpLogger } from './middlewares/httpLogger';
 import authRoutes from './modules/auth/auth.routes';
+import healthRoutes from './modules/health/health.routes';
 import { userRouter } from './modules/user/user.routes';
 import { errorResponse, successResponse } from './utils/response';
+
 const app = express();
 
 // Telescope-like HTML Dashboard (Available at /stats)
@@ -34,10 +36,7 @@ app.use(httpLogger);
 // Routes
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/auth', authRoutes);
-// Health check
-app.get('/health', (_, res) => {
-  return successResponse(res, { status: 'ok', timestamp: new Date() }, 'Health check');
-});
+app.use('/health', healthRoutes);
 
 app.use((_req, res) => {
   return errorResponse(res, null, 'Not Found', 404);

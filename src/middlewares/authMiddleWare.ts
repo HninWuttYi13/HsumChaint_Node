@@ -1,8 +1,8 @@
+import type { NextFunction, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { env } from '@/config/env';
 import { AppError } from '@/utils/AppError';
 import type { TokenPayload } from '@/utils/jwt';
-import type { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 export const authMiddleware = (req: Request, _res: Response, next: NextFunction) => {
   const { authorization } = req.headers;
   if (!authorization || !authorization.startsWith('Bearer ')) {

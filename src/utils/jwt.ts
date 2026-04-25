@@ -1,5 +1,5 @@
-import { env } from '@/config/env';
 import jwt from 'jsonwebtoken';
+import { env } from '@/config/env';
 export interface TokenPayload {
   userId: number;
   userType: 'Monk' | 'Donor';

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
 import { authMiddleware } from '@/middlewares/authMiddleWare';
 import { AppError } from '@/utils/AppError';
-import { type TokenPayload, generateAccessToken } from '@/utils/jwt';
+import { generateAccessToken, type TokenPayload } from '@/utils/jwt';
+
 describe('authMiddleware Unit Test', () => {
   let mockReq: any;
   let mockRes: any;

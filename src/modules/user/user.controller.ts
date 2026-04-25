@@ -1,8 +1,8 @@
+import type { NextFunction, Request, Response } from 'express';
 import { generatePaginationData } from '@/helper/paginationHelper';
 import { AppError } from '@/utils/AppError';
 import { successResponse } from '@/utils/response';
 import { uploadToR2 } from '@/utils/s3Storage';
-import type { NextFunction, Request, Response } from 'express';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 import {
   getAllUserService,

@@ -1,6 +1,7 @@
-import { PaginationQuerySchema } from '@/helper/paginationSchema';
 import { z } from 'zod';
+import { PaginationQuerySchema } from '@/helper/paginationSchema';
 import { passwordSchema, phoneSchema } from '../auth/auth.schema';
+
 const normalizePhoneSearch = z
   .string()
   .trim()

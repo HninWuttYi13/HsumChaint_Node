@@ -1,5 +1,5 @@
-import { validator } from '@/middlewares/validator';
 import { Router } from 'express';
+import { validator } from '@/middlewares/validator';
 import {
   forgotPassword,
   login,
@@ -15,6 +15,7 @@ import {
   registerSchema,
   resetPasswordSchema,
 } from './auth.schema';
+
 const router = Router();
 router.post('/register', validator(registerSchema), register);
 router.post('/login', validator(loginSchema), login);

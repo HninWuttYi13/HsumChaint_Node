@@ -1,7 +1,7 @@
+import { Router } from 'express';
 import { authMiddleware } from '@/middlewares/authMiddleWare';
 import { upload } from '@/middlewares/upload.Middleware';
 import { validator } from '@/middlewares/validator';
-import { Router } from 'express';
 import { deleteUser, getAllUsers, getMe, getUserById, updateUser } from './user.controller';
 import { getAllUsersSchema, idParamSchema, updateUserSchema } from './user.schema';
 
@@ -12,4 +12,5 @@ router.get('/me', getMe);
 router.get('/:id', validator(idParamSchema), getUserById);
 router.put('/:id', upload.single('avatar'), validator(updateUserSchema), updateUser);
 router.delete('/:id', validator(idParamSchema), deleteUser);
+
 export { router as userRouter };

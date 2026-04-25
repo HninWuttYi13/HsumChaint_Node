@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
+import jwt from 'jsonwebtoken';
+import type { Prisma } from 'prisma-client';
 import { env } from '@/config/env';
 import { createAuthSession } from '@/helper/createAuthSession';
 import type { TokenPayload } from '@/utils/jwt';
-import jwt from 'jsonwebtoken';
-import type { Prisma } from 'prisma-client';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../utils/AppError';
 import type { LoginInput, RegisterInput, resetPasswordInput } from './auth.schema';

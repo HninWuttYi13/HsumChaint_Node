@@ -1,10 +1,10 @@
+import type { NextFunction, Request, Response } from 'express';
 import { AppError } from '@/utils/AppError';
 import { successResponse } from '@/utils/response';
-import type { NextFunction, Request, Response } from 'express';
 import type {
+  forgotPasswordInput,
   LoginInput,
   RegisterInput,
-  forgotPasswordInput,
   resetPasswordInput,
 } from './auth.schema';
 import {

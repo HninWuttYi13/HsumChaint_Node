@@ -1,5 +1,5 @@
-import { type TokenPayload, generateAccessToken, generateRefreshToken } from '@/utils/jwt';
 import type { Prisma } from 'prisma-client';
+import { generateAccessToken, generateRefreshToken, type TokenPayload } from '@/utils/jwt';
 import type { prisma } from '../lib/prisma';
 /**
  * helper: generate a session(accessToken + refreshToken ) and stores refreshToken in database

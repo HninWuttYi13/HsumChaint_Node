@@ -1,6 +1,6 @@
+import type { Prisma } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { AppError } from '@/utils/AppError';
-import type { Prisma } from 'prisma-client';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 export const selectUser = {
   id: true,

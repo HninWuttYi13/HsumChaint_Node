@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError, type ZodTypeAny } from 'zod';
+
 //structure to parsed result
 type RequestData = {
   body?: unknown;

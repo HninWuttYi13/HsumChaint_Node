@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
-import { app } from '@/app';
-import { type TokenPayload, generateAccessToken } from '@/utils/jwt';
 import request from 'supertest';
+import { app } from '@/app';
+import { generateAccessToken, type TokenPayload } from '@/utils/jwt';
 
 /**
  * UNIT TEST STRATEGY: Prisma Mocking (same level as service tests)
