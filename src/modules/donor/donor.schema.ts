@@ -60,74 +60,12 @@ const GetAllDonorsQuerySchema = z.object({
   }),
 });
 
-const CreateDonationListSchema = z.object({
-  body: z.object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().optional(),
-    address: z.string().optional(),
-    donationDate: z
-      .string()
-      .transform((val) => new Date(val))
-      .refine((date) => !Number.isNaN(date.getTime()), 'Invalid date'),
-    recurrence: z.enum(['OneTime', 'Weekly', 'Monthly']).optional().default('OneTime'),
-    addReminder: z.boolean().optional().default(false),
-    monasteryId: z.number().int().positive('Monastery ID must be a positive integer'),
-    reviewerId: z.number().int().positive('Reviewer ID must be a positive integer').optional(),
-    donationTypeId: z.number().int().positive('Donation type ID must be a positive integer'),
-    donorIds: z.array(z.number().int().positive()).min(1, 'At least one donor is required'),
-  }),
-});
-
-const UpdateDonationListSchema = z.object({
-  body: z
-    .object({
-      title: z.string().min(1, 'Title is required').optional(),
-      description: z.string().optional(),
-      address: z.string().optional(),
-      donationDate: z
-        .string()
-        .transform((val) => new Date(val))
-        .refine((date) => !Number.isNaN(date.getTime()), 'Invalid date')
-        .optional(),
-      recurrence: z.enum(['OneTime', 'Weekly', 'Monthly']).optional(),
-      addReminder: z.boolean().optional(),
-      monasteryId: z.number().int().positive('Monastery ID must be a positive integer').optional(),
-      reviewerId: z.number().int().positive('Reviewer ID must be a positive integer').optional(),
-      donationTypeId: z
-        .number()
-        .int()
-        .positive('Donation type ID must be a positive integer')
-        .optional(),
-      donorIds: z.array(z.number().int().positive()).optional(),
-    })
-    .refine((data) => Object.keys(data).length > 0, 'At least one field is required'),
-});
-
-const GetAllDonationListsQuerySchema = z.object({
-  query: z.object({
-    title: z.string().optional(),
-    status: z.enum(['Pending', 'Confirmed', 'Completed', 'Cancelled']).optional(),
-    monasteryId: z.number().int().positive().optional(),
-  }),
-});
-
 type IdParamType = z.infer<typeof idParamSchema>;
 type CreateDonorType = z.infer<typeof CreateDonorSchema>;
 type UpdateDonorType = z.infer<typeof UpdateDonorSchema>;
 type GetAllDonorsQueryType = z.infer<typeof GetAllDonorsQuerySchema>;
-type CreateDonationListType = z.infer<typeof CreateDonationListSchema>;
-type UpdateDonationListType = z.infer<typeof UpdateDonationListSchema>;
-type GetAllDonationListsQueryType = z.infer<typeof GetAllDonationListsQuerySchema>;
 
-export {
-  idParamSchema,
-  CreateDonorSchema,
-  UpdateDonorSchema,
-  GetAllDonorsQuerySchema,
-  CreateDonationListSchema,
-  UpdateDonationListSchema,
-  GetAllDonationListsQuerySchema,
-};
+export { idParamSchema, CreateDonorSchema, UpdateDonorSchema, GetAllDonorsQuerySchema };
 export type {
   IdParamType,
   CreateDonorType,
