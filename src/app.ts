@@ -11,9 +11,11 @@ import { httpLogger } from './middlewares/httpLogger';
 import authRoutes from './modules/auth/auth.routes';
 import healthRoutes from './modules/health/health.routes';
 import { userRouter } from './modules/user/user.routes';
-import { errorResponse, successResponse } from './utils/response';
+import { errorResponse } from './utils/response';
 
 const app = express();
+
+app.set('trust proxy', 1);
 
 // Telescope-like HTML Dashboard (Available at /stats)
 app.use(swStats.getMiddleware({ uriPath: '/stats' }));
