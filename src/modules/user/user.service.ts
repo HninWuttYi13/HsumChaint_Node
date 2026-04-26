@@ -1,5 +1,6 @@
 import type { Prisma } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
+import { redis } from '@/lib/redis';
 import { AppError } from '@/utils/AppError';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 export const selectUser = {
@@ -64,11 +65,35 @@ export const getAllUserService = async (data: getAllUsersInput) => {
   return { users, totals };
 };
 //reusable function for specific user id
-const getUserWithProfile = (id: number) => {
-  return prisma.user.findFirst({
+const getUserWithProfile = async (id: number) => {
+  const cachedKey = `user:${id}:profile`;
+  try {
+    //First, try to get data from Redis
+    const cachedUser = await redis.get(cachedKey);
+    //when found, convert string back to object
+    if (cachedUser) {
+      try {
+        return JSON.parse(cachedUser);
+      } catch {
+        await redis.del(cachedKey); // cleanup bad cache
+      }
+    }
+  } catch (error) {
+    console.error('Redis Get Error:', error);
+  }
+  //if not found in cached, get from the database
+  const user = await prisma.user.findFirst({
     where: { id, isDeleted: false },
     select: { ...selectUser, monkProfile: true },
   });
+  if (user) {
+    try {
+      await redis.set(cachedKey, JSON.stringify(user), 'EX', 3600);
+    } catch (error) {
+      console.error('Redis Set Error:', error);
+    }
+  }
+  return user;
 };
 //me route service
 export const getMeService = getUserWithProfile;
@@ -126,11 +151,14 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
       update: monkProfileData,
     };
   }
-  return prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { id },
     data: updateData,
     select: { ...selectUser, monkProfile: true },
   });
+  //delete the old cache so the next "Get" fetches fresh data
+  await redis.del(`user:${id}:profile`);
+  return updatedUser;
 };
 //delete user account with soft delete
 export const softDeleteUserService = async (data: idParamsInput) => {
@@ -148,5 +176,7 @@ export const softDeleteUserService = async (data: idParamsInput) => {
     where: { id },
     data: { isDeleted: true },
   });
+  //clear cache so a "deleted" user doesn't stay visible in the cache
+  await redis.del(`user:${id}:profile`);
   return existingUser;
 };
