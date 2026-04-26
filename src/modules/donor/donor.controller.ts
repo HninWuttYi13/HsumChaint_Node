@@ -31,8 +31,13 @@ const createDonor = async (
 
 const getAllDonors = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, phoneNo, page, limit } =
-      req.query as unknown as GetAllDonorsQueryType['query'] & PaginationQueryType;
+    const {
+      name,
+      email,
+      phoneNo,
+      page = '1',
+      limit = '10',
+    } = req.query as Partial<GetAllDonorsQueryType['query'] & PaginationQueryType>;
     const result = await getAllDonorsService(
       req,
       { name, email, phoneNo },

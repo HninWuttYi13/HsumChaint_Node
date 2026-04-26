@@ -7,28 +7,6 @@ import { BadRequestError } from '../../utils/BadRequestError';
 import { NotFoundError } from '../../utils/NotFoundError';
 import type { CreateDonorType, GetAllDonorsQueryType, UpdateDonorType } from './donor.schema';
 
-const donorListInclude = {
-  donationListDonors: {
-    include: {
-      donationList: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          donationDate: true,
-          donationType: {
-            select: {
-              id: true,
-              donationType: true,
-              duration: true,
-            },
-          },
-        },
-      },
-    },
-  },
-} as const;
-
 export async function createDonorService(data: CreateDonorType) {
   const { name, email, phoneNo } = data.body;
 
@@ -74,7 +52,6 @@ export async function getAllDonorsService(
   const [donors, total] = await Promise.all([
     prisma.donor.findMany({
       where,
-      include: donorListInclude,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: 'desc' },

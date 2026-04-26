@@ -8,7 +8,7 @@ import {
   idParamSchema,
 } from './donor.schema';
 
-const GetAllDonorsFullSchema = z.object({
+export const GetAllDonorsFullSchema = z.object({
   query: GetAllDonorsQuerySchema.shape.query.extend(PaginationQuerySchema.shape),
 });
 
