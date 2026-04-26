@@ -17,7 +17,7 @@ const CreateDonorSchema = z.object({
     email: z.email('Invalid email address'),
     phoneNo: z
       .string()
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number')
+      .regex(/^\+?\d{1,15}$/, 'Invalid phone number')
       .transform((val) => val.replace(/[^\d+]/g, ''))
       .refine(
         (val) => val.length >= 6 && val.length <= 15,
@@ -33,7 +33,7 @@ const UpdateDonorSchema = z.object({
       email: z.email('Invalid email address').optional(),
       phoneNo: z
         .string()
-        .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number')
+        .regex(/^\+?\d{1,15}$/, 'Invalid phone number')
         .transform((val) => val.replace(/[^\d+]/g, ''))
         .refine(
           (val) => val.length >= 6 && val.length <= 15,
@@ -50,7 +50,8 @@ const GetAllDonorsQuerySchema = z.object({
     email: z.email('Invalid email address').optional(),
     phoneNo: z
       .string()
-      .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number')
+      // Changed [1-9] to \d to allow '0' at the start
+      .regex(/^\+?\d{1,15}$/, 'Invalid phone number')
       .transform((val) => val.replace(/[^\d+]/g, ''))
       .refine(
         (val) => val.length >= 6 && val.length <= 15,
@@ -66,12 +67,4 @@ type UpdateDonorType = z.infer<typeof UpdateDonorSchema>;
 type GetAllDonorsQueryType = z.infer<typeof GetAllDonorsQuerySchema>;
 
 export { idParamSchema, CreateDonorSchema, UpdateDonorSchema, GetAllDonorsQuerySchema };
-export type {
-  IdParamType,
-  CreateDonorType,
-  UpdateDonorType,
-  GetAllDonorsQueryType,
-  CreateDonationListType,
-  UpdateDonationListType,
-  GetAllDonationListsQueryType,
-};
+export type { IdParamType, CreateDonorType, UpdateDonorType, GetAllDonorsQueryType };

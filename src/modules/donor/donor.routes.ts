@@ -9,14 +9,13 @@ import {
 import {
   validateCreateDonor,
   validateDeleteDonor,
-  validateGetAllDonors,
   validateGetDonorById,
   validateUpdateDonor,
 } from './donor.middleware';
 
 const router = Router();
 
-router.get('/', validateGetAllDonors, getAllDonors);
+router.get('/', getAllDonors);
 
 router.post('/create', validateCreateDonor, createDonor);
 

@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { Request } from 'express';
-import { generatePaginationData } from '../../helper/paginationHelper';
+import { generatePaginationData } from '../../Helper/paginationHelper';
 import type { PaginationQueryType } from '../../helper/paginationSchema';
 import { prisma } from '../../lib/prisma';
 import { BadRequestError } from '../../utils/BadRequestError';
@@ -39,14 +39,17 @@ export async function getAllDonorsService(
 
   const where: Prisma.DonorWhereInput = {};
 
-  if (name) {
-    where.name = { contains: name };
+  // search by each field
+  if (name && name.trim() !== '') {
+    where.name = { contains: name.trim() };
   }
-  if (email) {
-    where.email = { contains: email };
+
+  if (email && email.trim() !== '') {
+    where.email = { contains: email.trim() };
   }
-  if (phoneNo) {
-    where.phoneNo = { contains: phoneNo };
+
+  if (phoneNo && phoneNo.trim() !== '') {
+    where.phoneNo = { contains: phoneNo.trim() };
   }
 
   const [donors, total] = await Promise.all([
