@@ -5,6 +5,9 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 COPY prisma ./prisma/
 
+# Pre-install prisma for faster migrations
+RUN bun add -d prisma @prisma/client dotenv
+
 RUN apt-get update && apt-get install -y curl && \
     bun install && \
     bunx prisma generate

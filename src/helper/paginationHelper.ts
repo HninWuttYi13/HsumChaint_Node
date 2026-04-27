@@ -46,10 +46,13 @@ export function generatePaginationData(
 
   const lastPage = Math.ceil(total / perPage);
 
+  // Normalize page number if it exceeds the last page bounds (from develop branch)
+  const normalizedPage = currentPage > lastPage ? lastPage : currentPage;
+
   // Generate metadata
   const meta: PaginationMeta = {
     total,
-    currentPage,
+    currentPage: normalizedPage,
     lastPage,
     perPage,
   };
@@ -87,9 +90,9 @@ export function generatePaginationData(
     links,
   };
 }
+
 /*
 Example response:
-*/
 // {
 //     "meta": {
 //       "total": 150,
@@ -101,4 +104,5 @@ Example response:
 //       "next": "https://api.example.com/donors?search=john&limit=10&page=3",
 //       "prev": "https://api.example.com/donors?search=john&limit=10&page=1"
 //     }
-//   }
+// } 
+*/

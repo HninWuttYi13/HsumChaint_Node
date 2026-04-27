@@ -10,9 +10,13 @@ import { globalErrorHandler } from './middlewares/errorHandler';
 import { httpLogger } from './middlewares/httpLogger';
 import authRoutes from './modules/auth/auth.routes';
 import { donorRouter } from './modules/donor/donor.routes';
+import healthRoutes from './modules/health/health.routes';
 import { userRouter } from './modules/user/user.routes';
 import { errorResponse, successResponse } from './utils/response';
+
 const app = express();
+
+app.set('trust proxy', 1);
 
 // Telescope-like HTML Dashboard (Available at /stats)
 app.use(swStats.getMiddleware({ uriPath: '/stats' }));
@@ -42,6 +46,8 @@ app.use('/api/v1/donors', donorRouter);
 app.get('/health', (_, res) => {
   return successResponse(res, { status: 'ok', timestamp: new Date() }, 'Health check');
 });
+
+app.use('/health', healthRoutes);
 
 app.use((_req, res) => {
   return errorResponse(res, null, 'Not Found', 404);

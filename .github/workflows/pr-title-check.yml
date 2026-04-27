@@ -3,7 +3,7 @@ name: PR Title Check
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
-    branches: [main, staging, develop]
+    branches: [main, develop]
 
 jobs:
   check-title:
@@ -22,6 +22,7 @@ jobs:
     uses: ./.github/workflows/reusable-telegram.yml
     secrets: inherit
     with:
+      environment: development
       format: HTML
       message: |
         <b>❌ PR Title Check Failed</b>

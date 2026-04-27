@@ -91,4 +91,4 @@ const deleteDonor = async (req: Request<DonorIdParam>, res: Response, next: Next
   }
 };
 
-export { createDonor, getAllDonors, getDonorById, updateDonor, deleteDonor };
+export { createDonor, deleteDonor, getAllDonors, getDonorById, updateDonor };

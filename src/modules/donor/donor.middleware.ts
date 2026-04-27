@@ -1,12 +1,6 @@
 import { z } from 'zod';
-import { PaginationQuerySchema } from '../../helper/paginationSchema';
 import { validator } from '../../middlewares/validator';
-import {
-  CreateDonorSchema,
-  GetAllDonorsQuerySchema,
-  UpdateDonorSchema,
-  idParamSchema,
-} from './donor.schema';
+import { CreateDonorSchema, idParamSchema, UpdateDonorSchema } from './donor.schema';
 
 const UpdateDonorFullSchema = z.object({
   params: idParamSchema.shape.params,

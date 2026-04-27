@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { PaginationQuerySchema } from '../../helper/paginationSchema';
 
 const idParamSchema = z.object({
   params: z.object({
@@ -66,5 +65,5 @@ type CreateDonorType = z.infer<typeof CreateDonorSchema>;
 type UpdateDonorType = z.infer<typeof UpdateDonorSchema>;
 type GetAllDonorsQueryType = z.infer<typeof GetAllDonorsQuerySchema>;
 
-export { idParamSchema, CreateDonorSchema, UpdateDonorSchema, GetAllDonorsQuerySchema };
-export type { IdParamType, CreateDonorType, UpdateDonorType, GetAllDonorsQueryType };
+export type { CreateDonorType, GetAllDonorsQueryType, IdParamType, UpdateDonorType };
+export { CreateDonorSchema, GetAllDonorsQuerySchema, idParamSchema, UpdateDonorSchema };

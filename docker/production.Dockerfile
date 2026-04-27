@@ -5,8 +5,11 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
+# Pre-install prisma for faster migrations
+RUN bun add -d prisma @prisma/client dotenv
+
 COPY . .
-RUN bunx prisma generate
+RUN DATABASE_URL="mysql://dummy:dummy@localhost:3306/dummy" bunx prisma generate
 RUN bun run build
 
 # Stage 2: Run stage
@@ -18,7 +21,7 @@ USER bunuser
 
 COPY --from=builder /app/dist/hsumchaint ./hsumchaint
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/generated ./generated
 
 EXPOSE 3000
 
