@@ -15,6 +15,8 @@ pre-push:
   commands:
     branch-name:
       run: |
+        set -e
+
         branch=$(git rev-parse --abbrev-ref HEAD)
 
         if echo "$branch" | grep -qE '^(main|develop)$'; then
