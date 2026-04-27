@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import type { Prisma } from 'prisma-client';
 import { env } from '@/config/env';
 import { createAuthSession } from '@/helper/createAuthSession';
+import { clearUserListCache } from '@/utils/cache.util';
 import type { TokenPayload } from '@/utils/jwt';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../../utils/AppError';
@@ -69,6 +70,7 @@ export const registerUser = async (data: RegisterInput) => {
     const { accessToken, refreshToken } = await createAuthSession(tx, user.id, user.userType);
     return { accessToken, refreshToken, user, monkProfile };
   });
+  await clearUserListCache();
   return result;
 };
 //login

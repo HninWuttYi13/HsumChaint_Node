@@ -2,7 +2,9 @@ import type { Prisma } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { redis } from '@/lib/redis';
 import { AppError } from '@/utils/AppError';
+import { clearUserListCache } from '@/utils/cache.util';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
+
 export const selectUser = {
   id: true,
   phone: true,
@@ -15,6 +17,14 @@ export const selectUser = {
 } as const;
 //get all use service
 export const getAllUserService = async (data: getAllUsersInput) => {
+  //create a unique fingerprint for specific search
+  const cacheKey = `users:list:${JSON.stringify(data)}`;
+  try {
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) return JSON.parse(cachedData);
+  } catch (error) {
+    console.error('Redis Get List Error', error);
+  }
   const {
     page,
     limit,
@@ -62,7 +72,15 @@ export const getAllUserService = async (data: getAllUsersInput) => {
     }),
     prisma.user.count({ where }),
   ]);
-  return { users, totals };
+  const result = { users, totals };
+  //save the result to Redis
+  try {
+    //use shorter time (10mins / 600s) because lists change often
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', 600);
+  } catch (error) {
+    console.error('Redis Set List Error', error);
+  }
+  return result;
 };
 //reusable function for specific user id
 const getUserWithProfile = async (id: number) => {
@@ -157,7 +175,8 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
     select: { ...selectUser, monkProfile: true },
   });
   //delete the old cache so the next "Get" fetches fresh data
-  await redis.del(`user:${id}:profile`);
+  await redis.del(`user:${id}:profile`); //clear specific profile
+  await clearUserListCache(); //clear all search lists
   return updatedUser;
 };
 //delete user account with soft delete
@@ -177,6 +196,7 @@ export const softDeleteUserService = async (data: idParamsInput) => {
     data: { isDeleted: true },
   });
   //clear cache so a "deleted" user doesn't stay visible in the cache
-  await redis.del(`user:${id}:profile`);
+  await redis.del(`user:${id}:profile`); //clear specific profile
+  await clearUserListCache(); //clear all search lists
   return existingUser;
 };
