@@ -31,7 +31,8 @@ pre-push:
           echo "   hotfix/bug-name"
           echo "   develop, main"
           exit 1
-        fi
+        fi   # ✅ THIS WAS MISSING
+
     tests:
       run: |
         branch=$(git rev-parse --abbrev-ref HEAD)
