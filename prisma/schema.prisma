@@ -7,14 +7,131 @@ datasource db {
   provider = "mysql"
 }
 
+model User {
+  id           Int                  @id @default(autoincrement())
+  phone        String               @unique
+  username     String
+  email        String?              @unique
+  password     String
+  userType     UserType             @map("user_type")
+  contactPhone String?
+  avatar       String?
+  fcmToken     String?              @map("fcm_token")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  isDeleted    Boolean              @default(false) @map("is_deleted")
+  monkProfile  MonkProfile?
+  resetToken   PasswordResetToken[]
+  refreshToken RefreshToken[]
 
-// Enums
+  @@index([isDeleted, userType, createdAt(sort: Desc)])
+  @@index([username])
+  @@index([contactPhone])
+  @@map("users")
+}
+
+model Donor {
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  email              String
+  phoneNo            String              @map("phone_no")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  donationListDonors DonationListDonor[]
+
+  @@unique([id, name])
+  @@index([name, email])
+  @@index([phoneNo])
+  @@index([email])
+  @@map("donors")
+}
+
+model DonationList {
+  id             Int                 @id @default(autoincrement())
+  title          String
+  description    String?             @map("description")
+  address        String?             @map("address")
+  status         DonationStatus      @default(Pending)
+  donationDate   DateTime            @map("donation_due_date")
+  recurrence     DonationRecurrence  @default(OneTime)
+  addReminder    Boolean             @default(false) @map("add_reminder")
+  createdDate    DateTime            @map("created_date")
+  updatedDate    DateTime?           @map("update_at")
+  donationTypeId Int                 @map("donation_type_id")
+  donors         DonationListDonor[]
+  donationType   DonationType        @relation(fields: [donationTypeId], references: [id])
+
+  @@index([donationTypeId])
+  @@index([status])
+  @@map("donation_lists")
+}
+
+model DonationListDonor {
+  id             Int          @id @default(autoincrement())
+  donationListId Int          @map("donation_list_id")
+  donorId        Int          @map("donor_id")
+  donationList   DonationList @relation(fields: [donationListId], references: [id])
+  donor          Donor        @relation(fields: [donorId], references: [id])
+
+  @@index([donationListId])
+  @@index([donorId])
+  @@map("donation_list_donors")
+}
+
+model DonationType {
+  id           Int              @id @default(autoincrement())
+  donationType DonationTypeName @map("donation_type")
+  duration     Int
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  donationList DonationList[]
+
+  @@index([donationType])
+  @@map("donation_types")
+}
+
+model RefreshToken {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  refreshToken String    @unique @map("refresh_token")
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  revokedAt    DateTime? @map("revoked_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([refreshToken, userId, revokedAt])
+  @@index([userId], map: "refresh_tokens_user_id_fkey")
+  @@map("refresh_tokens")
+}
+
+model MonkProfile {
+  id               Int    @id @default(autoincrement())
+  userId           Int    @unique @map("user_id")
+  monasteryName    String @map("monastery_name")
+  monasteryAddress String @map("monastery_address")
+  user             User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([monasteryName])
+  @@index([monasteryAddress])
+  @@map("monk_profile")
+}
+
+model PasswordResetToken {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  resetToken String   @unique @map("reset_token")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "password_reset_tokens_user_id_fkey")
+  @@map("password_reset_tokens")
+}
 
 enum UserType {
   Monk
   Donor
 }
-
 
 enum DonationStatus {
   Pending
@@ -33,120 +150,4 @@ enum DonationTypeName {
   Breakfast
   Lunch
   Dinner
-}
-
-model User {
-  id           Int      @id @default(autoincrement())
-  phone        String   @unique
-  username     String
-  email        String?  @unique
-  password     String
-  userType     UserType @map("user_type")
-  contactPhone String? 
-  monkProfile  MonkProfile?
-  avatar       String? 
-  fcmToken     String?  @map("fcm_token")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  isDeleted    Boolean  @default(false) @map("is_deleted")
-  refreshToken RefreshToken[]
-  resetToken   PasswordResetToken[]
-  @@index([isDeleted, userType, createdAt(sort: Desc)])
-  @@index([username])
-  @@index([contactPhone])
-  @@map("users")
-}
-
-model Donor {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  phoneNo   String   @map("phone_no")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt  @map("updated_at")
-  donationListDonors DonationListDonor[]
-
-  @@unique([id, name])
-  @@index([name, email])
-  @@index([phoneNo])
-  @@index([email])
-  @@map("donors")
-}
-
-model DonationList {
-  id              Int               @id @default(autoincrement())
-  title           String
-  description     String?           @map("description")
-  address         String?           @map("address")
-  status          DonationStatus    @default(Pending)
-  donationDate    DateTime          @map("donation_due_date")
-  recurrence      DonationRecurrence @default(OneTime)
-  addReminder     Boolean           @default(false) @map("add_reminder")
-  createdDate     DateTime          @map("created_date")
-  updatedDate     DateTime?         @map("update_at")
-
-  donationTypeId  Int               @map("donation_type_id")
-  donationType    DonationType      @relation(fields: [donationTypeId], references: [id])
-  donors          DonationListDonor[]
-
-  @@index([donationTypeId])
-  @@index([status])
-  @@map("donation_lists")
-}
-
-model DonationListDonor {
-  id             Int          @id @default(autoincrement())
-  donationList   DonationList @relation(fields: [donationListId], references: [id])
-  donationListId Int          @map("donation_list_id")
-  donor          Donor        @relation(fields: [donorId], references: [id])
-  donorId        Int          @map("donor_id")
-
-  @@index([donationListId])
-  @@index([donorId])
-  @@map("donation_list_donors")
-}
-
-model DonationType {
-  id           Int              @id @default(autoincrement())
-  donationType DonationTypeName @map("donation_type")
-  duration     Int    
-  createdAt    DateTime         @default(now())  @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
-
-  donationList DonationList[]
-
-  @@index([donationType])
-  @@map("donation_types")
-
-}
-
-  model RefreshToken {
-  id            Int       @id @default (autoincrement())
-  userId        Int       @map("user_id")
-  refreshToken  String    @unique @map("refresh_token")
-  expiresAt     DateTime  @map("expires_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  revokedAt     DateTime?  @map("revoked_at")
-  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([refreshToken, userId, revokedAt])
-  @@map("refresh_tokens")
-}
-model MonkProfile {
-  id               Int  @id @default (autoincrement())
-  userId           Int  @unique @map("user_id") 
-  monasteryName    String @map("monastery_name")
-  monasteryAddress String @map("monastery_address")
-  user             User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([monasteryName])
-@@index([monasteryAddress])
-  @@map("monk_profile")
-}
-model PasswordResetToken {
-  id          Int       @id @default (autoincrement())
-  userId      Int       @map("user_id")
-  resetToken  String    @unique @map("reset_token")
-  expiresAt   DateTime  @map("expires_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@map("password_reset_tokens")
 }

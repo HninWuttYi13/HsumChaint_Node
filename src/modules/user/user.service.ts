@@ -74,12 +74,24 @@ export const getAllUserService = async (data: getAllUsersInput) => {
  * Used by GetMe and GetUserById.
  */
 const getUserWithProfile = async (id: number) => {
+  console.log('Searching for User ID:', id); // Debug: Check the value and type
+
   const user = await prisma.user.findFirst({
     where: { id, isDeleted: false },
     select: { ...selectUser, monkProfile: true },
   });
 
-  if (!user) throw new AppError('User is not found', 404);
+  if (!user) {
+    //Debug: Check if the user exists AT ALL (even if deleted)
+    const existsButDeleted = await prisma.user.findUnique({ where: { id } });
+    if (existsButDeleted) {
+      console.warn(`User ${id} exists but isDeleted is true.`);
+    } else {
+      console.warn(`User ${id} does not exist in the database.`);
+    }
+
+    throw new AppError('User is not found', 404);
+  }
   return user;
 };
 

@@ -22,10 +22,10 @@ export const validator =
       };
 
       // 3. Simple, clean reassignment (Standard Express pattern)
-      if (data.body !== undefined) req.body = data.body;
-      if (data.params !== undefined) req.params = data.params;
-      if (data.query !== undefined) req.query = data.query;
-      if (data.cookies !== undefined) req.cookies = data.cookies;
+      if (data.body !== undefined) Object.assign(req.body, data.body);
+      if (data.params !== undefined) Object.assign(req.params, data.params);
+      if (data.query !== undefined) Object.assign(req.query, data.query);
+      if (data.cookies !== undefined) Object.assign(req.cookies, data.cookies);
 
       return next();
     } catch (error: unknown) {
