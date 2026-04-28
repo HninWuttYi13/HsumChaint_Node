@@ -42,6 +42,7 @@ export const registerUser = async (data: RegisterInput) => {
         password: hashedPassword,
         userType: data.userType,
         contactPhone: data.contactPhone,
+        avatar: data.avatar,
       },
       select: {
         id: true,
@@ -51,6 +52,7 @@ export const registerUser = async (data: RegisterInput) => {
         userType: true,
         createdAt: true,
         contactPhone: true,
+        avatar: true,
       },
     });
     let monkProfile = null;
@@ -109,6 +111,7 @@ export const loginUser = async (data: LoginInput) => {
     email: user.email,
     userType: user.userType,
     contactPhone: user.contactPhone,
+    avatar: user.avatar,
     //if the user is Monk, return the monkProfile
     monkProfile: user.userType === 'Monk' ? user.monkProfile : null,
   };
