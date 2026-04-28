@@ -2,7 +2,7 @@ import type { Prisma } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { redis } from '@/lib/redis';
 import { AppError } from '@/utils/AppError';
-import { clearUserListCache } from '@/utils/cache.util';
+import { buildListCacheKey, clearUserListCache } from '@/utils/cache.util';
 import type { getAllUsersInput, idParamsInput, updateUserBodyInput } from './user.schema';
 
 export const selectUser = {
@@ -18,7 +18,7 @@ export const selectUser = {
 //get all use service
 export const getAllUserService = async (data: getAllUsersInput) => {
   //create a unique fingerprint for specific search
-  const cacheKey = `users:list:${JSON.stringify(data)}`;
+  const cacheKey = buildListCacheKey(data);
   try {
     const cachedData = await redis.get(cacheKey);
     if (cachedData) return JSON.parse(cachedData);

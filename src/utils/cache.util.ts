@@ -19,8 +19,16 @@ export const clearUserListCache = async () => {
         await redis.del(...keys);
       }
     } while (cursor !== '0'); //'0' means we've circled back to the start
-    console.info('User list cache cleared successfully');
   } catch (error) {
     console.error('Redis Scan/Clear Error:', error);
   }
+};
+
+/**
+ * Builds a stable, deterministic cache key from the input object.
+ * Sorting keys prevents duplicate entries when callers pass fields
+ * in different insertion orders.
+ */
+export const buildListCacheKey = (data: Record<string, unknown>): string => {
+  return `users:list:${JSON.stringify(data, Object.keys(data as object).sort())}`;
 };
