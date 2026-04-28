@@ -112,6 +112,7 @@ export const loginUser = async (data: LoginInput) => {
     userType: user.userType,
     contactPhone: user.contactPhone,
     avatar: user.avatar,
+    createdAt: user.createdAt,
     //if the user is Monk, return the monkProfile
     monkProfile: user.userType === 'Monk' ? user.monkProfile : null,
   };
