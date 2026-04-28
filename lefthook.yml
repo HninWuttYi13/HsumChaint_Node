@@ -14,7 +14,7 @@ commit-msg:
 pre-push:
   commands:
     branch-name:
-      run: 
+      run: |
         branch=$(git rev-parse --abbrev-ref HEAD) &&
         if echo "$branch" | grep -qE '^(main|develop)$'; then exit 0; fi &&
         if ! echo "$branch" | grep -qE '^(feat|fix|chore|hotfix)/[a-z0-9-]+$'; then
