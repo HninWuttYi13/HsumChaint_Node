@@ -1,4 +1,3 @@
-shell: bash
 pre-commit:
   parallel: true
   commands:
@@ -15,7 +14,6 @@ commit-msg:
 pre-push:
   commands:
     branch-name:
-      shell: bash
       run: |
         set -e
 
