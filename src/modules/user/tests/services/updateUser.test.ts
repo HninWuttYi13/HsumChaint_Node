@@ -21,6 +21,17 @@ import { updateUserService } from '../../user.service';
  * and assert only the behavior relevant to that scenario — no real DB or
  * bcrypt hashing involved.
  */
+// Mock Redis BEFORE any service imports resolve
+// Without this, the service hits the real Redis in Docker and returns
+// cached data, making it impossible to test the DB fallback path.
+mock.module('@/lib/redis', () => ({
+  redis: {
+    get: mock(() => Promise.resolve(null)), // simulate cache miss every time
+    set: mock(() => Promise.resolve('OK')),
+    del: mock(() => Promise.resolve(1)),
+    scan: mock(() => Promise.resolve(['0', []])),
+  },
+}));
 mock.module('@/lib/prisma', () => ({
   prisma: {
     user: {

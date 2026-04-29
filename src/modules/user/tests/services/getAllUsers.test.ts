@@ -22,6 +22,17 @@ import { getAllUserService } from '../../user.service';
  * Common pitfall: Do NOT use Response.json({}) as a placeholder — it returns
  * a Promise object, not a function, which causes "is not a function" errors.
  */
+// Mock Redis BEFORE any service imports resolve
+// Without this, the service hits the real Redis in Docker and returns
+// cached data, making it impossible to test the DB fallback path.
+mock.module('@/lib/redis', () => ({
+  redis: {
+    get: mock(() => Promise.resolve(null)), // simulate cache miss every time
+    set: mock(() => Promise.resolve('OK')),
+    del: mock(() => Promise.resolve(1)),
+    scan: mock(() => Promise.resolve(['0', []])),
+  },
+}));
 mock.module('@/lib/prisma', () => ({
   prisma: {
     user: {
@@ -139,7 +150,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
 
     const result = await getAllUserService({ page: 1, limit: 10 });
 
-    expect(result.users.find((u) => u.phone === '09111111111')).toBeUndefined();
+    expect(result.users.find((u: { phone: string }) => u.phone === '09111111111')).toBeUndefined();
     expect(result.users.length).toBe(2);
   });
 
@@ -189,7 +200,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
     });
 
     expect(result.users.length).toBe(2);
-    expect(result.users.every((u) => u.userType === 'Donor')).toBe(true);
+    expect(result.users.every((u: { userType: string }) => u.userType === 'Donor')).toBe(true);
   });
 
   // Verifies correct offset calculation for page 2.

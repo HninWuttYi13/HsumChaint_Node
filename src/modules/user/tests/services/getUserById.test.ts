@@ -17,6 +17,17 @@ import { getUserByIdService } from '../../user.service';
  *  3. Each test sets its own fake return value to simulate a specific DB state
  *     (found user, null, soft-deleted, etc.) — no seed/cleanup needed at all.
  */
+
+// Mock Redis BEFORE any service imports resolve
+// Without this, the service hits the real Redis in Docker and returns
+// cached data, making it impossible to test the DB fallback path.
+mock.module('@/lib/redis', () => ({
+  redis: {
+    get: mock(() => Promise.resolve(null)), // simulate cache miss every time
+    set: mock(() => Promise.resolve('OK')),
+    del: mock(() => Promise.resolve(1)),
+  },
+}));
 mock.module('@/lib/prisma', () => ({
   prisma: {
     user: {

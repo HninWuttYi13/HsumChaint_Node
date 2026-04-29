@@ -38,7 +38,14 @@ const FAKE_USER = {
     monasteryAddress: 'Test Address',
   },
 };
-
+mock.module('@/lib/redis', () => ({
+  redis: {
+    get: mock(() => Promise.resolve(null)),
+    set: mock(() => Promise.resolve('OK')),
+    del: mock(() => Promise.resolve(1)),
+    scan: mock(() => Promise.resolve(['0', []])),
+  },
+}));
 // Mock Prisma at the bottom of the stack — real services run, fake DB responses.
 mock.module('@/lib/prisma', () => ({
   prisma: {
