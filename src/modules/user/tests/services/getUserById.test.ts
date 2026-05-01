@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import type { User } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { getUserByIdService } from '../../user.service';
 
@@ -22,6 +23,7 @@ mock.module('@/lib/prisma', () => ({
     user: {
       // Placeholder — spyOn below will override the return value per test
       findFirst: mock(() => Promise.resolve(null)),
+      findUnique: mock(() => Promise.resolve(null)),
     },
   },
 }));
@@ -30,17 +32,24 @@ mock.module('@/lib/prisma', () => ({
 // This gives us mockResolvedValue() and call-assertion abilities per test.
 const findFirstMock = spyOn(prisma.user, 'findFirst');
 
+const findUniqueMock = spyOn(prisma.user, 'findUnique');
+
 /**
  * Shared mock data — mirrors what the real DB would return.
  * Donor has no monkProfile (null), Monk has a nested monkProfile object.
  * We reuse these across tests instead of seeding/cleaning a real DB.
  */
+
+enum UserType {
+  Monk = 'Monk',
+  Donor = 'Donor',
+}
 const mockDonor = {
   id: 1,
   phone: '09111111111',
   username: 'test_donor',
   email: 'donor@test.com',
-  userType: 'Donor',
+  userType: UserType.Donor,
   isDeleted: false,
   monkProfile: null, // Donors never have a monkProfile
 };
@@ -50,7 +59,7 @@ const mockMonk = {
   phone: '09222222222',
   username: 'test_monk',
   email: 'monk@test.com',
-  userType: 'Monk',
+  userType: UserType.Monk,
   isDeleted: false,
   monkProfile: {
     monasteryName: 'Golden Monastery',
@@ -63,12 +72,13 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   // Without this, a mockResolvedValue() from one test could affect the next.
   beforeEach(() => {
     findFirstMock.mockClear();
+    findUniqueMock.mockClear();
   });
 
   // Happy path for Monks: verifies the service returns the user AND
   // correctly exposes the nested monkProfile relation.
   it('should return user with monkProfile when user is a Monk', async () => {
-    findFirstMock.mockResolvedValue(mockMonk as any); // fake: DB found the monk
+    findFirstMock.mockResolvedValue(mockMonk as unknown as User); // fake: DB found the monk
 
     const result = await getUserByIdService({ id: mockMonk.id });
 
@@ -80,7 +90,7 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   // Happy path for Donors: verifies the service returns the user,
   // and that monkProfile is null since Donors have no profile row.
   it('should return user with null monkProfile when user is a Donor', async () => {
-    findFirstMock.mockResolvedValue(mockDonor as any); // fake: DB found the donor
+    findFirstMock.mockResolvedValue(mockDonor as unknown as User); // fake: DB found the donor
 
     const result = await getUserByIdService({ id: mockDonor.id });
 
@@ -92,23 +102,23 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   // Edge case: ID doesn't exist in the DB.
   // Prisma returns null for findUnique when no record matches —
   // the service should pass that null through rather than throw.
-  it('should return null for non-existent ID', async () => {
-    findFirstMock.mockResolvedValue(null); // fake: DB found nothing
+  it('should throw error for non-existent ID', async () => {
+    findFirstMock.mockResolvedValue(null);
+    findUniqueMock.mockResolvedValue(null);
 
-    const result = await getUserByIdService({ id: 99999 });
-
-    expect(result).toBeNull();
+    await expect(getUserByIdService({ id: 99999 })).rejects.toThrow('User is not found');
   });
 
-  // Soft-delete behavior: instead of actually updating a DB row like the
-  // integration test did, we simply mock findUnique to return null —
-  // simulating what the service's `where: { isDeleted: false }` clause
-  // would produce when the user is soft-deleted.
-  it('should return null if the user is soft-deleted (isDeleted: true)', async () => {
-    findFirstMock.mockResolvedValue(null); // fake: service filters out deleted users
+  it('should throw error if user is soft-deleted', async () => {
+    findFirstMock.mockResolvedValue(null);
 
-    const result = await getUserByIdService({ id: mockDonor.id });
+    const softDeletedUser = {
+      ...mockDonor,
+      isDeleted: true,
+    };
 
-    expect(result).toBeNull();
+    findUniqueMock.mockResolvedValue(softDeletedUser);
+
+    await expect(getUserByIdService({ id: 1 })).rejects.toThrow('User is not found');
   });
 });

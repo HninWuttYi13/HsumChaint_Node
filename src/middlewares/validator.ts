@@ -1,19 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
 import { ZodError, type ZodTypeAny } from 'zod';
 
-//structure to parsed result
-type RequestData = {
-  body?: unknown;
-  params?: Record<string, unknown>;
-  query?: Record<string, unknown>;
-  cookies?: Record<string, unknown>;
-};
-
 export const validator =
   <T extends ZodTypeAny>(schema: T) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      //combine all request data into one object
+      // 1. Combine all request data into one object for validation
       const parsed = await schema.parseAsync({
         body: req.body,
         params: req.params,
@@ -21,49 +13,41 @@ export const validator =
         cookies: req.cookies ?? {},
       });
 
-      // stored parsed result
-      const data = parsed as RequestData;
-
-      const update = <K extends keyof RequestData>(
-        target: unknown, //original express object -> req.body, req.query
-        source: RequestData[K] //validated data from zod
-      ) => {
-        if (source === undefined || typeof target !== 'object' || target === null) return;
-
-        const t = target as Record<string, unknown>;
-
-        // clear old keys
-        for (const key of Object.keys(t)) {
-          delete t[key];
-        } //after that t become {}
-        // assign new validated values
-        Object.assign(t, source); //e.g {name: "abc"}
+      // 2. Safely cast the parsed result
+      const data = parsed as {
+        body?: unknown;
+        params?: Request['params'];
+        query?: Request['query'];
+        cookies?: Request['cookies'];
       };
 
-      update(req.body, data.body);
-      update(req.params, data.params);
-      update(req.query, data.query);
-      update(req.cookies, data.cookies);
+      // 3. Simple, clean reassignment (Standard Express pattern)
+      if (data.body !== undefined) Object.assign(req.body, data.body);
+      if (data.params !== undefined) Object.assign(req.params, data.params);
+      if (data.query !== undefined) Object.assign(req.query, data.query);
+      if (data.cookies !== undefined) Object.assign(req.cookies, data.cookies);
 
       return next();
-    } catch (error) {
+    } catch (error: unknown) {
+      // Handle Zod Validation Errors
       if (error instanceof ZodError) {
         return res.status(400).json({
-          status: 'failed',
+          success: false,
           message: 'Validation Error',
-          detail: error.issues.map((e) => ({
+          error: error.issues.map((e) => ({
             path: e.path.join('.'),
             message: e.message,
           })),
         });
       }
 
+      // Handle unexpected server errors and log them for debugging
       console.error('[Validator Error]:', error);
 
       return res.status(500).json({
-        status: 'error',
+        success: false,
         message: 'Internal Server Error',
-        detail: null,
+        error: null,
       });
     }
   };
