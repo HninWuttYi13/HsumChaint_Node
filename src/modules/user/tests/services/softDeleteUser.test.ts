@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import { type User, UserType } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { softDeleteUserService } from '../../user.service';
 
@@ -50,8 +51,15 @@ describe('softDeleteUserService Unit Test (Mocking)', () => {
     id: 444,
     username: 'ghost_user',
     email: 'ghost@test.com',
-    isDeleted: false, // active — eligible for soft deletion
-  };
+    isDeleted: false,
+    phone: '09123456789',
+    userType: UserType.Monk,
+    contactPhone: '09111111111',
+    password: 'hashed_password',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    avatar: null,
+  } as User;
 
   // Happy path: user exists and is active, so the service should:
   //  1. Find the user via findUnique
@@ -59,8 +67,8 @@ describe('softDeleteUserService Unit Test (Mocking)', () => {
   //  3. Return the updated user object
   it('should soft delete user by setting isDeleted to true', async () => {
     // Arrange: findUnique returns an active user, update returns the mutated version
-    findFirstMock.mockResolvedValue(mockUser as any);
-    updateMock.mockResolvedValue({ ...mockUser, isDeleted: true } as any);
+    findFirstMock.mockResolvedValue(mockUser);
+    updateMock.mockResolvedValue({ ...mockUser, isDeleted: true });
 
     const result = await softDeleteUserService({ id: 444 });
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import { type User, UserType } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { getUserByIdService } from '../../user.service';
 
@@ -35,12 +36,13 @@ const findFirstMock = spyOn(prisma.user, 'findFirst');
  * Donor has no monkProfile (null), Monk has a nested monkProfile object.
  * We reuse these across tests instead of seeding/cleaning a real DB.
  */
+
 const mockDonor = {
   id: 1,
   phone: '09111111111',
   username: 'test_donor',
   email: 'donor@test.com',
-  userType: 'Donor',
+  userType: UserType.Monk,
   isDeleted: false,
   monkProfile: null, // Donors never have a monkProfile
 };
@@ -50,7 +52,7 @@ const mockMonk = {
   phone: '09222222222',
   username: 'test_monk',
   email: 'monk@test.com',
-  userType: 'Monk',
+  userType: UserType.Monk,
   isDeleted: false,
   monkProfile: {
     monasteryName: 'Golden Monastery',
@@ -68,7 +70,7 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   // Happy path for Monks: verifies the service returns the user AND
   // correctly exposes the nested monkProfile relation.
   it('should return user with monkProfile when user is a Monk', async () => {
-    findFirstMock.mockResolvedValue(mockMonk as any); // fake: DB found the monk
+    findFirstMock.mockResolvedValue(mockMonk as unknown as User); // fake: DB found the monk
 
     const result = await getUserByIdService({ id: mockMonk.id });
 
@@ -80,7 +82,7 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   // Happy path for Donors: verifies the service returns the user,
   // and that monkProfile is null since Donors have no profile row.
   it('should return user with null monkProfile when user is a Donor', async () => {
-    findFirstMock.mockResolvedValue(mockDonor as any); // fake: DB found the donor
+    findFirstMock.mockResolvedValue(mockDonor as unknown as User); // fake: DB found the donor
 
     const result = await getUserByIdService({ id: mockDonor.id });
 
@@ -92,14 +94,11 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   // Edge case: ID doesn't exist in the DB.
   // Prisma returns null for findUnique when no record matches —
   // the service should pass that null through rather than throw.
-  it('should return null for non-existent ID', async () => {
+  it('should throw error for non-existent ID', async () => {
     findFirstMock.mockResolvedValue(null); // fake: DB found nothing
 
-    const result = await getUserByIdService({ id: 99999 });
-
-    expect(result).toBeNull();
+    await expect(getUserByIdService({ id: 99999 })).rejects.toThrow('User is not found');
   });
-
   // Soft-delete behavior: instead of actually updating a DB row like the
   // integration test did, we simply mock findUnique to return null —
   // simulating what the service's `where: { isDeleted: false }` clause
@@ -107,8 +106,6 @@ describe('getUserByIdService Unit Test (Mocking)', () => {
   it('should return null if the user is soft-deleted (isDeleted: true)', async () => {
     findFirstMock.mockResolvedValue(null); // fake: service filters out deleted users
 
-    const result = await getUserByIdService({ id: mockDonor.id });
-
-    expect(result).toBeNull();
+    await expect(getUserByIdService({ id: mockDonor.id })).rejects.toThrow('User is not found');
   });
 });

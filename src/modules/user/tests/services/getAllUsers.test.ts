@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import type { User } from 'prisma-client';
 import { prisma } from '@/lib/prisma';
 import { getAllUserService } from '../../user.service';
 
@@ -31,7 +32,7 @@ mock.module('@/lib/prisma', () => ({
     },
     // The service wraps findMany + count inside $transaction for atomicity.
     // We simulate that by simply resolving all promises in parallel with Promise.all.
-    $transaction: mock((promises: Promise<any>[]) => Promise.all(promises)),
+    $transaction: mock((promises: Promise<unknown>[]) => Promise.all(promises)),
   },
 }));
 
@@ -87,7 +88,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // Verifies that the service correctly passes `take` and `skip` to Prisma,
   // and that it returns only as many users as the limit allows.
   it('should return correct pagination data(limit test)', async () => {
-    findManyMock.mockResolvedValue(mockUsers.slice(0, 2) as any); // fake: DB returns first 2
+    findManyMock.mockResolvedValue(mockUsers.slice(0, 2) as unknown as User[]); // fake: DB returns first 2
     countMock.mockResolvedValue(3); // fake: total in DB is 3
 
     const result = await getAllUserService({ page: 1, limit: 2 });
@@ -99,7 +100,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // Verifies that passing `username` causes the service to return
   // only users whose username contains the search string (partial match).
   it('should filter users by partial username', async () => {
-    findManyMock.mockResolvedValue([mockUsers[0]] as any); // fake: DB matched only apple_donor
+    findManyMock.mockResolvedValue([mockUsers[0]] as unknown as User[]); // fake: DB matched only apple_donor
     countMock.mockResolvedValue(1);
 
     const result = await getAllUserService({
@@ -115,7 +116,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // Verifies that passing `monasteryName` correctly filters Monk users
   // by their nested monkProfile relation.
   it('should filter monks by monastery name correctly', async () => {
-    findManyMock.mockResolvedValue([mockUsers[1]] as any); // fake: DB matched only banana_monk
+    findManyMock.mockResolvedValue([mockUsers[1]] as unknown as User[]); // fake: DB matched only banana_monk
     countMock.mockResolvedValue(1);
 
     const result = await getAllUserService({
@@ -134,7 +135,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // `where: { isDeleted: false }` clause would do.
   it('should not include soft-deleted users in the list', async () => {
     const remainingUsers = mockUsers.slice(1); // apple_donor (index 0) is "deleted"
-    findManyMock.mockResolvedValue(remainingUsers as any);
+    findManyMock.mockResolvedValue(remainingUsers as unknown as User[]);
     countMock.mockResolvedValue(2);
 
     const result = await getAllUserService({ page: 1, limit: 10 });
@@ -162,7 +163,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // Verifies that passing `phone` causes the service to filter
   // by partial phone number match.
   it('should filter users by phone number correctly', async () => {
-    findManyMock.mockResolvedValue([mockUsers[0]] as any); // fake: DB matched apple_donor
+    findManyMock.mockResolvedValue([mockUsers[0]] as unknown as User[]); // fake: DB matched apple_donor
     countMock.mockResolvedValue(1);
 
     const result = await getAllUserService({
@@ -179,7 +180,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // and that every returned user matches the requested type.
   it('should filter users by userType (Donor)', async () => {
     const donors = mockUsers.filter((u) => u.userType === 'Donor'); // [apple_donor, cherry_donor]
-    findManyMock.mockResolvedValue(donors as any);
+    findManyMock.mockResolvedValue(donors as unknown as User[]);
     countMock.mockResolvedValue(2);
 
     const result = await getAllUserService({
@@ -196,7 +197,7 @@ describe('getAllUserService Unit Test (Mocking)', () => {
   // With limit=2, page 2 should skip the first 2 records (skip = (page-1) * limit = 2).
   // Also asserts that findMany was called with the exact skip/take values.
   it('should return correct data for page 2', async () => {
-    findManyMock.mockResolvedValue([mockUsers[2]] as any); // fake: DB returns only cherry_donor
+    findManyMock.mockResolvedValue([mockUsers[2]] as unknown as User[]); // fake: DB returns only cherry_donor
     countMock.mockResolvedValue(3); // fake: 3 total users exist
 
     const result = await getAllUserService({ page: 2, limit: 2 });
