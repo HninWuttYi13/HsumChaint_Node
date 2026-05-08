@@ -173,7 +173,10 @@ describe('UserController Unit Test (Mocking)', () => {
   // DB state verification is covered by softDeleteUserService unit test.
   it('DELETE /api/v1/users/:id - should soft delete user', async () => {
     findFirstMock.mockResolvedValue(FAKE_USER as unknown as User);
-    updateMock.mockResolvedValue({ ...FAKE_USER, isDeleted: true } as unknown as User);
+    updateMock.mockResolvedValue({
+      ...FAKE_USER,
+      isDeleted: true,
+    } as unknown as User);
 
     const response = await request(app)
       .delete(`/api/v1/users/${FAKE_USER_ID}`)
