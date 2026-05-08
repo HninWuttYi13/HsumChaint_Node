@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test';
+import type { User } from 'prisma-client';
 import request from 'supertest';
 import { app } from '@/app';
 import { generateAccessToken, type TokenPayload } from '@/utils/jwt';
@@ -56,7 +57,7 @@ mock.module('@/lib/prisma', () => ({
       update: mock(() => Promise.resolve({ ...FAKE_USER, isDeleted: true })),
       count: mock(() => Promise.resolve(1)),
     },
-    $transaction: mock((promises: Promise<any>[]) => Promise.all(promises)),
+    $transaction: mock((promises: Promise<unknown>[]) => Promise.all(promises)),
   },
 }));
 
@@ -91,7 +92,7 @@ describe('UserController Unit Test (Mocking)', () => {
   // Happy path: valid token → middleware passes → service fetches user →
   // controller returns 200 with the correct profile shape.
   it('GET /api/v1/users/me - should return current user profile', async () => {
-    findFirstMock.mockResolvedValue(FAKE_USER as any);
+    findFirstMock.mockResolvedValue(FAKE_USER as unknown as User);
 
     const response = await request(app).get('/api/v1/users/me').set('Authorization', accessToken);
 
@@ -122,7 +123,7 @@ describe('UserController Unit Test (Mocking)', () => {
   // Verifies controller passes query params through to the service correctly
   // and wraps the result in the expected paginated response shape.
   it('GET /api/v1/users - should return paginated users with filter', async () => {
-    findManyMock.mockResolvedValue([FAKE_USER] as any);
+    findManyMock.mockResolvedValue([FAKE_USER] as unknown as User[]);
     countMock.mockResolvedValue(1);
 
     const response = await request(app)
@@ -153,11 +154,11 @@ describe('UserController Unit Test (Mocking)', () => {
   // Happy path update: valid input flows through to Prisma update,
   // controller returns the updated user.
   it('PUT /api/v1/users/:id - should update user successfully', async () => {
-    findUniqueMock.mockResolvedValue(FAKE_USER as any);
+    findUniqueMock.mockResolvedValue(FAKE_USER as unknown as User);
     updateMock.mockResolvedValue({
       ...FAKE_USER,
       username: 'updated_api_user',
-    } as any);
+    } as unknown as User);
 
     const response = await request(app)
       .put(`/api/v1/users/${FAKE_USER_ID}`)
@@ -171,8 +172,8 @@ describe('UserController Unit Test (Mocking)', () => {
   // Soft delete: service sets isDeleted:true, controller returns success message.
   // DB state verification is covered by softDeleteUserService unit test.
   it('DELETE /api/v1/users/:id - should soft delete user', async () => {
-    findFirstMock.mockResolvedValue(FAKE_USER as any);
-    updateMock.mockResolvedValue({ ...FAKE_USER, isDeleted: true } as any);
+    findFirstMock.mockResolvedValue(FAKE_USER as unknown as User);
+    updateMock.mockResolvedValue({ ...FAKE_USER, isDeleted: true } as unknown as User);
 
     const response = await request(app)
       .delete(`/api/v1/users/${FAKE_USER_ID}`)

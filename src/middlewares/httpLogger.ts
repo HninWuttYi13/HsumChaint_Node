@@ -3,6 +3,15 @@ import { logger } from '../utils/logger';
 
 const SILENT_PATHS = ['/health', '/stats', '/api-docs', '/favicon.ico'];
 
+function isNonEmptyRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value as Record<string, unknown>).length > 0
+  );
+}
+
 export const httpLogger = pinoHttp({
   logger,
   // Skip noisy internal/health check routes
@@ -14,12 +23,15 @@ export const httpLogger = pinoHttp({
   customErrorMessage: (req, res, err) =>
     `${req.method} ${req.url} → ${res.statusCode} | ${err.message}`,
   // Only include body/query when they are non-empty
-  customProps: (req: any) => ({
-    ...(req.body && Object.keys(req.body).length ? { body: req.body } : {}),
-    ...(Object.keys(req.query ?? {}).length ? { query: req.query } : {}),
-  }),
+  customProps: (req) => {
+    const r = req as unknown as { body?: unknown; query?: unknown };
+    return {
+      ...(isNonEmptyRecord(r.body) ? { body: r.body } : {}),
+      ...(isNonEmptyRecord(r.query) ? { query: r.query } : {}),
+    };
+  },
   serializers: {
-    req: () => undefined as any, // Suppress default req object
-    res: () => undefined as any, // Suppress default res object
+    req: () => undefined, // Suppress default req object
+    res: () => undefined, // Suppress default res object
   },
 });
