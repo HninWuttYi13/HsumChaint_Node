@@ -5,7 +5,7 @@ import { AppError } from '@/utils/AppError';
 import type { TokenPayload } from '@/utils/jwt';
 export const authMiddleware = (req: Request, _res: Response, next: NextFunction) => {
   const { authorization } = req.headers;
-  if (!authorization || !authorization.startsWith('Bearer ')) {
+  if (!authorization?.startsWith('Bearer ')) {
     return next(new AppError('Unauthorized', 401));
   }
   const accessToken = authorization.split(' ')[1];

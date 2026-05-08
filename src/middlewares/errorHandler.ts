@@ -11,7 +11,7 @@ export const globalErrorHandler = (
 ) => {
   let statusCode = 500;
   let message = 'Internal Server Error';
-  let errorData: any = process.env.NODE_ENV === 'development' ? err : undefined;
+  let errorData: unknown = process.env.NODE_ENV === 'development' ? err : undefined;
 
   if (err instanceof AppError) {
     statusCode = err.statusCode;
@@ -19,14 +19,31 @@ export const globalErrorHandler = (
   } else if (err instanceof ZodError) {
     statusCode = 400;
     message = 'Validation Error';
-    errorData = (err as any).errors || (err as any).issues;
+    errorData = err.issues;
   } else if (err instanceof Error && err.name === 'ValidationError') {
     statusCode = 400;
     message = err.message;
+  } else if (isDatabaseConnectionError(err)) {
+    statusCode = 503;
+    message = 'Database unavailable. Please check the database is running and reachable.';
+    errorData = process.env.NODE_ENV === 'development' ? err : undefined;
   }
-
-  // Handle other well known errors (e.g. Prisma etc.)
-  // if (err instanceof PrismaClientKnownRequestError) { ... }
 
   errorResponse(res, errorData, message, statusCode);
 };
+
+function isDatabaseConnectionError(err: unknown): boolean {
+  if (err && typeof err === 'object') {
+    const e = err as { name?: string; cause?: { message?: string; originalCode?: string } };
+    if (e.name === 'DriverAdapterError') return true;
+    const msg = (e.cause?.message ?? (e as Error).message ?? '').toString();
+    return (
+      msg.includes('pool timeout') ||
+      msg.includes('Connection timeout') ||
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('ENOTFOUND') ||
+      e.cause?.originalCode === '45028'
+    );
+  }
+  return false;
+}

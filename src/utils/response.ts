@@ -1,10 +1,10 @@
 import type { Response } from 'express';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
-  error?: any;
+  error?: unknown;
 }
 
 export const successResponse = <T>(
@@ -23,7 +23,7 @@ export const successResponse = <T>(
 
 export const errorResponse = (
   res: Response,
-  error: any,
+  error: unknown,
   message = 'Internal Server Error',
   statusCode = 500
 ) => {
