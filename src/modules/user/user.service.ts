@@ -32,8 +32,8 @@ export const getAllUserService = async (data: getAllUsersInput) => {
     monasteryName,
     monasteryAddress,
   } = data;
+
   const skip = (page - 1) * limit;
-  //check the existing data
   const where: Prisma.UserWhereInput = { isDeleted: false };
 
   // Build filters
@@ -43,10 +43,13 @@ export const getAllUserService = async (data: getAllUsersInput) => {
   if (contactPhone) where.contactPhone = { startsWith: contactPhone };
   if (userType) where.userType = userType;
   //create empty object to add both monastery address and monastery name
-  // Build Monk Profile filters
   const monkProfileFilter: Prisma.MonkProfileWhereInput = {};
-  if (monasteryAddress) monkProfileFilter.monasteryAddress = { startsWith: monasteryAddress };
-  if (monasteryName) monkProfileFilter.monasteryName = { startsWith: monasteryName };
+  if (monasteryAddress) {
+    monkProfileFilter.monasteryAddress = { startsWith: monasteryAddress };
+  }
+  if (monasteryName) {
+    monkProfileFilter.monasteryName = { startsWith: monasteryName };
+  }
   //after collect all data add into where object
   if (Object.keys(monkProfileFilter).length > 0) {
     where.monkProfile = { is: monkProfileFilter };
@@ -65,22 +68,17 @@ export const getAllUserService = async (data: getAllUsersInput) => {
     }),
     prisma.user.count({ where }),
   ]);
+
   return { users, totals };
 };
-
-/**
- * Reusable helper to fetch a single user with their monk profile.
- * Used by GetMe and GetUserById.
- */
-const getUserWithProfile = async (id: number) => {
-  const user = await prisma.user.findFirst({
+//reusable function for specific user id
+const getUserWithProfile = (id: number) => {
+  return prisma.user.findFirst({
     where: { id, isDeleted: false },
     select: { ...selectUser, monkProfile: true },
   });
-  if (!user) throw new AppError('User is not found', 404);
-  return user;
 };
-
+//me route service
 export const getMeService = getUserWithProfile;
 
 export const getUserByIdService = ({ id }: idParamsInput) => getUserWithProfile(id);
@@ -112,20 +110,25 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
     ...(data.contactPhone !== undefined && { contactPhone: data.contactPhone }),
     ...(data.avatar !== undefined && { avatar: data.avatar }),
   };
-  //build monk profile update separately because it belongs to a separate database
+
+  // 3. Build Nested Monk Profile Update
   const monkProfileData: Prisma.MonkProfileUpdateInput = {};
   //collet only provide fields (partial update support)
-  if (data.monasteryName !== undefined) monkProfileData.monasteryName = data.monasteryName;
-  if (data.monasteryAddress !== undefined) monkProfileData.monasteryAddress = data.monasteryAddress;
+  if (data.monasteryName !== undefined) {
+    monkProfileData.monasteryName = data.monasteryName;
+  }
+  if (data.monasteryAddress !== undefined) {
+    monkProfileData.monasteryAddress = data.monasteryAddress;
+  }
   // If at least one monastery field is provided, attach nested update
-
   if (Object.keys(monkProfileData).length > 0) {
-    // Business rule: only Monk users are allowed to update monastery info
     if (user.userType !== 'Monk') {
       throw new AppError('Only monks can update monastery info', 400);
     }
     // Prisma nested update for related monkProfile table
-    updateData.monkProfile = { update: monkProfileData };
+    updateData.monkProfile = {
+      update: monkProfileData,
+    };
   }
 
   return prisma.user.update({
@@ -134,7 +137,7 @@ export const updateUserService = async (id: number, data: updateUserBodyInput) =
     select: { ...selectUser, monkProfile: true },
   });
 };
-//delete user account with soft delete
+
 export const softDeleteUserService = async (data: idParamsInput) => {
   const { id } = data;
 
